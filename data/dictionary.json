@@ -1,184 +1,258 @@
-{
-    "preguntas": {
-        "P1": "Departamento",
-        "P8": "¿Cuantos años cumplidos tiene?",
-        "P9": "¿Es usted hombre o mujer?",
-        "P10": "¿Qué tipo de documento de identidad tiene usted?",
-        "P16S9": "Dada su condición física y mental, y sin ningún tipo de ayuda, ¿usted puede hacer las actividades diarias sin mostrar problemas cardíacos o respiratorios?",
-        "P20S1": "¿Usted ha sido diagnosticado con hipertensión arterial?",
-        "P20S2": "¿Usted ha sido diagnosticado con diabetes?",
-        "P20S3": "¿Usted ha sido diagnosticado con cancer?",
-        "P20S4": "¿Usted ha sido diagnosticado con tuberculosis?",
-        "P20S5": "¿Usted ha sido diagnosticado con VIH-SIDA?",
-        "P22": "¿Cuál fue la PRINCIPAL razón por la que empezó a vivir en la calle?",
-        "P23S1": "¿Cuanto tiempo lleva usted viviendo en la calle?(Años)",
-        "P23S2": "¿Cuanto tiempo lleva usted viviendo en la calle?(Meses)",
-        "P24": "¿Cual es la PRINCIPAL razón por la que continúa viviendo en la calle?",
-        "P27": "¿Usted sabe leer y escribir?",
-        "P28": "¿Cuál es el nivel educativo MÁS ALTO alcanzado por usted?",
-        "P29": "PRINCIPALMENTE, ¿cómo consigue usted dinero?",
-        "P30S1": "Actualmente, ¿usted consume cigarrillo?",
-        "P30S2": "Actualmente, ¿usted consume alcohol?",
-        "P30S3": "Actualmente, ¿usted consume marihuana?",
-        "P30S4": "Actualmente, ¿usted consume inhalantes(sacol, pegante, bóxer, gasolina, tíner, etc.?",
-        "P30S5": "Actualmente, ¿usted consume cocaína?",
-        "P30S6": "Actualmente, ¿usted consume basuco?",
-        "P30S7": "Actualmente, ¿usted consume heroina?",
-        "P30S8": "Actualmente, ¿usted consume pepas?",
-        "P30S9": "Actualmente, ¿usted consume otras(maduro, pistolo, etc.)?",
-        "P30S1A1": "Edad inicio del consumo de cigarrillo",
-        "P30S2A2": "Edad inicio del consumo de alcohol",
-        "P30S3A3": "Edad inicio del consumo de marihuana",
-        "P30S4A4": "Edad inicio del consumo de inhalantes(sacol, pegante, bóxer, gasolina, tíner, etc.",
-        "P30S5A5": "Edad inicio del consumo de cocaína",
-        "P30S6A6": "Edad inicio del consumo de basuco",
-        "P30S7A7": "Edad inicio del consumo de heroina",
-        "P30S8A8": "Edad inicio del consumo de pepas",
-        "P30S9A9": "Edad inicio del consumo de otras(maduro, pistolo, etc.)",
-        "P34": "¿Usted se reconoce en orientación sexual como: ?"
-    },
-    "respuestas": {
-        "P9": {
-            "1": "Hombre",
-            "2": "Mujer"
+    {
+        "preguntas": [
+            "P1",
+            "P8R",
+            "P9",
+            "P10R",
+            "P16S9",
+            "P20S1",
+            "P20S2",
+            "P20S3",
+            "P20S4",
+            "P20S5",
+            "P22",
+            "P23S1R",
+            "P23S2",
+            "P24",
+            "P27",
+            "P28R",
+            "P29",
+            "P30S1",
+            "P30S2",
+            "P30S3",
+            "P30S4",
+            "P30S5",
+            "P30S6",
+            "P30S7",
+            "P30S8",
+            "P30S9",
+            "P30S1A1R",
+            "P30S2A1R",
+            "P30S3A1R",
+            "P30S4A1R",
+            "P30S5A1R",
+            "P30S6A1R",
+            "P30S7A1R",
+            "P30S8A1R",
+            "P30S9A1R",
+            "P34"
+        ],
+        "respuestas": {
+            "P9": {
+                "1": "Hombre",
+                "2": "Mujer"
+            },
+            "P10": {
+                "1": "Cédula de ciudadanía",
+                "2": "Tarjeta de identidad",
+                "3": "Cédula de extranjería",
+                "4": "Documento nacional de identidad (otro país)",
+                "5": "Pasaporte",
+                "6": "No tiene documento",
+                "9": "No responde"
+            },
+            "P16S9": {
+                "1": "Sí, sin dificultad",
+                "2": "Sí, con alguna dificultad",
+                "3": "No puede hacerlo",
+                "9": "No responde"
+            },
+            "P20S1": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No sabe / No responde"
+            },
+            "P20S2": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No sabe / No responde"
+            },
+            "P20S3": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No sabe / No responde"
+            },
+            "P20S4": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No sabe / No responde"
+            },
+            "P20S5": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No sabe / No responde"
+            },
+            "P22": {
+                "1": "Consumo de sustancias psicoactivas",
+                "2": "Dificultades o conflictos familiares",
+                "3": "Falta de oportunidades laborales / Económicas",
+                "4": "Gusto por la vida en la calle",
+                "5": "Desplazamiento forzado o violencia",
+                "6": "Problemas de salud mental",
+                "7": "Abandono o falta de red de apoyo",
+                "8": "Otra razón",
+                "9": "No responde"
+            },
+            "P24": {
+                "1": "Dependencia o consumo de sustancias",
+                "2": "Falta de oportunidades o empleo",
+                "3": "Acostumbramiento / Gusto por la calle",
+                "4": "No tener apoyo familiar",
+                "5": "Problemas legales o judiciales",
+                "6": "Otra razón",
+                "9": "No responde"
+            },
+            "P27": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No responde"
+            },
+            "P28": {
+                "1": "Ninguno",
+                "2": "Preescolar",
+                "3": "Primaria incompleta",
+                "4": "Primaria completa",
+                "5": "Secundaria / Bachillerato incompleto",
+                "6": "Secundaria / Bachillerato completo",
+                "7": "Técnico o Tecnológico",
+                "8": "Universitario / Profesional",
+                "9": "No sabe / No responde"
+            },
+            "P29": {
+                "1": "Reciclaje / Recolección de materiales",
+                "2": "Venta ambulante / Limpieza de vidrios",
+                "3": "Mendicidad / Pedir dinero",
+                "4": "Trabajos informales u ocasionales (Chasas, ayudante)",
+                "5": "Actividades ilegales",
+                "6": "Ayudas institucionales o de fundaciones",
+                "7": "Otra forma",
+                "9": "No responde"
+            },
+            "P30S1": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No responde"
+            },
+            "P30S2": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No responde"
+            },
+            "P30S3": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No responde"
+            },
+            "P30S4": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No responde"
+            },
+            "P30S5": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No responde"
+            },
+            "P30S6": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No responde"
+            },
+            "P30S7": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No responde"
+            },
+            "P30S8": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No responde"
+            },
+            "P30S9": {
+                "1": "Sí",
+                "2": "No",
+                "9": "No responde"
+            },
+            "P34": {
+                "1": "Heterosexual",
+                "2": "Homosexual (Gay / Lesbiana)",
+                "3": "Bisexual",
+                "4": "Otro",
+                "9": "No sabe / No responde"
+            }
         },
-        "P10": {
-            "1": "Cédula de ciudadanía",
-            "2": "Tarjeta de identidad",
-            "3": "Cédula de extranjería",
-            "4": "Documento nacional de identidad (otro país)",
-            "5": "Pasaporte",
-            "6": "No tiene documento",
-            "9": "No responde"
+        "renombres": {
+            "P1": "departamento",
+            "P8R": "edad",
+            "P9": "genero",
+            "P10R": "tipo_documento",
+            "P16S9": "actividades_sin_esfuerzo_fisico",
+            "P20S1": "dx_hipertension",
+            "P20S2": "dx_diabetes",
+            "P20S3": "dx_cancer",
+            "P20S4": "dx_tuberculosis",
+            "P20S5": "dx_vih_sida",
+            "P22": "razon_inicio_vida_calle",
+            "P23S1R": "años_en_calle",
+            "P23S2": "meses_en_calle",
+            "P24": "razon_continua_en_calle",
+            "P27": "sabe_leer_escribir",
+            "P28R": "nivel_educativo",
+            "P29": "forma_obtener_dinero",
+            "P30S1": "consume_cigarrillo",
+            "P30S2": "consume_alcohol",
+            "P30S3": "consume_marihuana",
+            "P30S4": "consume_inhalantes",
+            "P30S5": "consume_cocaina",
+            "P30S6": "consume_basuco",
+            "P30S7": "consume_heroina",
+            "P30S8": "consume_pepas",
+            "P30S9": "consume_otras_sustancias",
+            "P30S1A1R": "edad_inicio_cigarrillo",
+            "P30S2A1R": "edad_inicio_alcohol",
+            "P30S3A1R": "edad_inicio_marihuana",
+            "P30S4A1R": "edad_inicio_inhalantes",
+            "P30S5A1R": "edad_inicio_cocaina",
+            "P30S6A1R": "edad_inicio_basuco",
+            "P30S7A1R": "edad_inicio_heroina",
+            "P30S8A1R": "edad_inicio_pepas",
+            "P30S9A1R": "edad_inicio_otras_sustancias",
+            "P34": "orientacion_sexual"
         },
-        "P16S9": {
-            "1": "Sí, sin dificultad",
-            "2": "Sí, con alguna dificultad",
-            "3": "No puede hacerlo",
-            "9": "No responde"
-        },
-        "P20S1": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No sabe / No responde"
-        },
-        "P20S2": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No sabe / No responde"
-        },
-        "P20S3": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No sabe / No responde"
-        },
-        "P20S4": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No sabe / No responde"
-        },
-        "P20S5": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No sabe / No responde"
-        },
-        "P22": {
-            "1": "Consumo de sustancias psicoactivas",
-            "2": "Dificultades o conflictos familiares",
-            "3": "Falta de oportunidades laborales / Económicas",
-            "4": "Gusto por la vida en la calle",
-            "5": "Desplazamiento forzado o violencia",
-            "6": "Problemas de salud mental",
-            "7": "Abandono o falta de red de apoyo",
-            "8": "Otra razón",
-            "9": "No responde"
-        },
-        "P24": {
-            "1": "Dependencia o consumo de sustancias",
-            "2": "Falta de oportunidades o empleo",
-            "3": "Acostumbramiento / Gusto por la calle",
-            "4": "No tener apoyo familiar",
-            "5": "Problemas legales o judiciales",
-            "6": "Otra razón",
-            "9": "No responde"
-        },
-        "P27": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No responde"
-        },
-        "P28": {
-            "1": "Ninguno",
-            "2": "Preescolar",
-            "3": "Primaria incompleta",
-            "4": "Primaria completa",
-            "5": "Secundaria / Bachillerato incompleto",
-            "6": "Secundaria / Bachillerato completo",
-            "7": "Técnico o Tecnológico",
-            "8": "Universitario / Profesional",
-            "9": "No sabe / No responde"
-        },
-        "P29": {
-            "1": "Reciclaje / Recolección de materiales",
-            "2": "Venta ambulante / Limpieza de vidrios",
-            "3": "Mendicidad / Pedir dinero",
-            "4": "Trabajos informales u ocasionales (Chasas, ayudante)",
-            "5": "Actividades ilegales",
-            "6": "Ayudas institucionales o de fundaciones",
-            "7": "Otra forma",
-            "9": "No responde"
-        },
-        "P30S1": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No responde"
-        },
-        "P30S2": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No responde"
-        },
-        "P30S3": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No responde"
-        },
-        "P30S4": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No responde"
-        },
-        "P30S5": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No responde"
-        },
-        "P30S6": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No responde"
-        },
-        "P30S7": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No responde"
-        },
-        "P30S8": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No responde"
-        },
-        "P30S9": {
-            "1": "Sí",
-            "2": "No",
-            "9": "No responde"
-        },
-        "P34": {
-            "1": "Heterosexual",
-            "2": "Homosexual (Gay / Lesbiana)",
-            "3": "Bisexual",
-            "4": "Otro",
-            "9": "No sabe / No responde"
-        }
+        "columnas_categoricas": [
+            "genero",
+            "tipo_documento",
+            "actividades_sin_esfuerzo_fisico",
+            "dx_hipertension",
+            "dx_diabetes",
+            "dx_cancer",
+            "dx_tuberculosis",
+            "dx_vih_sida",
+            "razon_inicio_vida_calle",
+            "razon_continua_en_calle",
+            "sabe_leer_escribir",
+            "nivel_educativo",
+            "forma_obtener_dinero",
+            "consume_cigarrillo",
+            "consume_alcohol",
+            "consume_marihuana",
+            "consume_inhalantes",
+            "consume_cocaina",
+            "consume_basuco",
+            "consume_heroina",
+            "consume_pepas",
+            "consume_otras_sustancias",
+            "orientacion_sexual"
+        ],
+        "columnas_edad_inicio": [
+            "edad_inicio_cigarrillo",
+            "edad_inicio_alcohol",
+            "edad_inicio_marihuana",
+            "edad_inicio_inhalantes",
+            "edad_inicio_cocaina",
+            "edad_inicio_basuco",
+            "edad_inicio_heroina",
+            "edad_inicio_pepas",
+            "edad_inicio_otras_sustancias"
+        ]
     }
-}

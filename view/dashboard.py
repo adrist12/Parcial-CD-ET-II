@@ -767,24 +767,144 @@ def pagina_modelo():
 # PÁGINA 3 — VISUALIZACIONES
 # ──────────────────────────────────────────────────────────────────────────────
 def pagina_graficas():
-    tab1, tab2, tab3 = st.tabs(
-        ["Importancia de Variables", "Distribuciones", "Análisis Comparativo"]
-    )
-    items = [
-        ("Gráfica de importancia de variables",
-         "Pendiente — requiere modelo final entrenado"),
-        ("Distribuciones por variable",
-         "Comparación consumidores vs. no consumidores"),
-        ("Posicionamiento del individuo en la población",
-         "Percentiles y análisis de clusters"),
-    ]
-    for tab, (title, sub) in zip([tab1, tab2, tab3], items):
-        with tab:
-            st.markdown(
-                f'<div class="placeholder">{title}<span>{sub}</span></div>',
-                unsafe_allow_html=True
-            )
+    import plotly.express as px
+    from model.interview_model import InterviewModel
 
+    @st.cache_resource
+    def cargar_datos_limpios():
+        data_path = "data/CHC_base_anonimizada09-09-2021.xlsx"
+        dict_path = "data/dictionary.json"
+        
+        # Cargar datos con InterviewModel
+        interview = InterviewModel(data_path, dict_path)
+        interview.clean_data()
+        df = interview.data
+        
+        # Cargar el diccionario de respuestas
+        with open(dict_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        
+        # 1. Mapeo de DEPARTAMENTO
+        mapeo_departamentos = {
+            1: "Amazonas", 2: "Antioquia", 3: "Arauca", 4: "Atlántico",
+            5: "Bolívar", 6: "Boyacá", 7: "Caldas", 8: "Caquetá",
+            9: "Casanare", 10: "Cauca", 11: "Cesar", 12: "Chocó",
+            13: "Córdoba", 14: "Cundinamarca", 15: "Guainía", 16: "Guaviare",
+            17: "Huila", 18: "La Guajira", 19: "Magdalena", 20: "Meta",
+            21: "Nariño", 22: "Norte de Santander", 23: "Putumayo", 24: "Quindío",
+            25: "Risaralda", 26: "San Andrés y Providencia", 27: "Santander",
+            28: "Sucre", 29: "Tolima", 30: "Valle del Cauca", 31: "Vaupés",
+            32: "Vichada", 33: "Bogotá D.C."
+        }
+        if 'departamento' in df.columns:
+            df['departamento'] = df['departamento'].map(mapeo_departamentos)
+        
+        # 2. Mapeo para TIPO DE DOCUMENTO (P10)
+        if 'tipo_documento' in df.columns and 'P10' in config['respuestas']:
+            mapeo = {int(k): v for k, v in config['respuestas']['P10'].items()}
+            df['tipo_documento'] = df['tipo_documento'].map(mapeo)
+        
+        # 3. Mapeo para ACTIVIDADES DIARIAS (P16S9)
+        if 'actividades_sin_esfuerzo_fisico' in df.columns and 'P16S9' in config['respuestas']:
+            mapeo = {int(k): v for k, v in config['respuestas']['P16S9'].items()}
+            df['actividades_sin_esfuerzo_fisico'] = df['actividades_sin_esfuerzo_fisico'].map(mapeo)
+        
+        # 4. Mapeo para RAZÓN DE SEGUIR EN CALLE (P24)
+        if 'razon_continua_en_calle' in df.columns and 'P24' in config['respuestas']:
+            mapeo = {int(k): v for k, v in config['respuestas']['P24'].items()}
+            df['razon_continua_en_calle'] = df['razon_continua_en_calle'].map(mapeo)
+        
+        # 5. Mapeo para FORMA DE OBTENER DINERO (P29)
+        if 'forma_obtener_dinero' in df.columns and 'P29' in config['respuestas']:
+            mapeo = {int(k): v for k, v in config['respuestas']['P29'].items()}
+            df['forma_obtener_dinero'] = df['forma_obtener_dinero'].map(mapeo)
+        
+        # 6. Mapeo para ORIENTACIÓN SEXUAL (P34)
+        if 'orientacion_sexual' in df.columns and 'P34' in config['respuestas']:
+            mapeo = {int(k): v for k, v in config['respuestas']['P34'].items()}
+            df['orientacion_sexual'] = df['orientacion_sexual'].map(mapeo)
+        
+        # 7. Mapeo para NIVEL EDUCATIVO (P28)
+        if 'nivel_educativo' in df.columns and 'P28' in config['respuestas']:
+            mapeo = {int(k): v for k, v in config['respuestas']['P28'].items()}
+            df['nivel_educativo'] = df['nivel_educativo'].map(mapeo)
+        
+        # 8. Crear columna de número de enfermedades
+        dx_cols = ['dx_hipertension', 'dx_tuberculosis', 'dx_vih_sida']
+        if all(col in df.columns for col in dx_cols):
+            df['num_enfermedades'] = (df[dx_cols] == 1).sum(axis=1)
+        else:
+            df['num_enfermedades'] = 0
+        
+        return df
+    
+    df = cargar_datos_limpios()
+    
+    # Diccionario de columnas a graficar (nombre amigable -> nombre real en df)
+    columnas_a_graficar = {
+        'Departamento': 'departamento',
+        'Tipo de documento': 'tipo_documento',
+        'Actividades diarias sin esfuerzo físico': 'actividades_sin_esfuerzo_fisico',
+        'Número de enfermedades': 'num_enfermedades',
+        'Tiempo viviendo en la calle (meses)': 'tiempo_total_calle_meses',
+        'Razón de seguir en la calle': 'razon_continua_en_calle',
+        'Principal forma de obtener dinero': 'forma_obtener_dinero',
+        'Orientación sexual': 'orientacion_sexual',
+        'Nivel educativo': 'nivel_educativo'
+    }
+    
+    # Verificar qué columnas existen realmente
+    columnas_existentes = []
+    for amigable, real in columnas_a_graficar.items():
+        if real in df.columns:
+            columnas_existentes.append((amigable, real))
+        else:
+            st.warning(f"La columna '{real}' no existe en los datos. Se omitirá.")
+    
+    if not columnas_existentes:
+        st.error("No hay columnas válidas para graficar. Verifica los nombres.")
+        return
+    
+    opciones = {amigable: real for amigable, real in columnas_existentes}
+    
+    # Pestañas
+    tab1, tab3 = st.tabs(["📊 Distribuciones", "🔗 Relaciones"])
+    
+    with tab1:
+        st.markdown("### Distribución de cada variable")
+        var_amigable = st.selectbox("Elige una variable:", list(opciones.keys()))
+        col_real = opciones[var_amigable]
+        
+        if pd.api.types.is_numeric_dtype(df[col_real]) and col_real not in ['num_enfermedades']:
+            # Numérica continua (ej. tiempo en meses)
+            fig = px.histogram(df, x=col_real, title=f"Distribución de {var_amigable}",
+                               labels={col_real: var_amigable}, color_discrete_sequence=['#2451FF'])
+        else:
+            # Categórica o número de enfermedades (entero)
+            conteos = df[col_real].value_counts().reset_index()
+            conteos.columns = [col_real, 'Frecuencia']
+            fig = px.bar(conteos, x=col_real, y='Frecuencia', title=f"Frecuencia de {var_amigable}",
+                         color_discrete_sequence=['#2451FF'])
+            fig.update_layout(xaxis={'categoryorder': 'total descending'})
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with tab3:
+        st.markdown("### Relación entre dos variables")
+        col1 = st.selectbox("Variable X:", list(opciones.keys()), key='x')
+        col2 = st.selectbox("Variable Y:", list(opciones.keys()), key='y')
+        col1r = opciones[col1]
+        col2r = opciones[col2]
+        
+        if pd.api.types.is_numeric_dtype(df[col1r]) and pd.api.types.is_numeric_dtype(df[col2r]):
+            fig = px.scatter(df, x=col1r, y=col2r, title=f"{col1} vs {col2}",
+                             labels={col1r: col1, col2r: col2}, opacity=0.6)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            contingency = pd.crosstab(df[col1r], df[col2r])
+            fig = px.imshow(contingency, text_auto=True, aspect="auto",
+                            title=f"Frecuencias cruzadas: {col1} vs {col2}",
+                            color_continuous_scale='Blues')
+            st.plotly_chart(fig, use_container_width=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MAIN

@@ -152,35 +152,42 @@ class InterviewModel:
 # ==============================================================================
 # PREDICTIVE MODEL
 # ==============================================================================
-
 class PredictiveModel:
     """
     Responsabilidad única: entrenar modelos predictivos y generar predicciones.
-
     Recibe los datos ya limpios de InterviewModel.
-    No sabe nada de Excel ni de limpieza.
-
+    
     TARGET: consumo_duro = 1 si consume basuco, heroína o cocaína.
-
-    FLUJO:
-        create_target() → select_predictors() → build_pipelines()
-        → train() → evaluate() → feature_importance() → save()
     """
 
-    # Definimos los predictores como constante de clase.
-    # Solo las top 10 por importancia del análisis previo, para mantener
-    # el modelo ágil y evitar ruido de variables poco relevantes.
+    # 1. Expandimos la lista para incluir las 17 variables de tu formulario
     FEATURES = [
-        'edad',                       # 19.5% importancia
-        'razon_continua_en_calle',    # 15.7%
-        'tiempo_total_calle_meses',   # 15.5%
-        'razon_inicio_vida_calle',    # 11.1%
-        'forma_obtener_dinero',       #  7.9%
-        'nivel_educativo',            #  6.5%
-        'consume_marihuana',          #  6.2%
-        'consume_cigarrillo',         #  5.6%
-        'consume_alcohol',            #  2.4%
-        'consume_inhalantes',         #  1.9%
+        # ── 01 · SOCIODEMOGRÁFICO ──
+        'edad', 
+        'genero', 
+        'orientacion_sexual', 
+        'nivel_educativo', 
+        'sabe_leer_escribir',
+        
+        # ── 02 · HISTORIA EN CALLE ──
+        'tiempo_total_calle_meses', 
+        'razon_inicio_vida_calle', 
+        'razon_continua_en_calle',
+        
+        # ── 03 · SUBSISTENCIA ──
+        'forma_obtener_dinero',
+        
+        # ── 04 · DIAGNÓSTICOS DE SALUD ──
+        'dx_hipertension', 
+        'dx_tuberculosis', 
+        'dx_vih_sida', 
+        'actividades_sin_esfuerzo_fisico',
+        
+        # ── 05 · CONSUMO DE SUSTANCIAS ──
+        'consume_cigarrillo', 
+        'consume_alcohol', 
+        'consume_inhalantes', 
+        'consume_marihuana'  # Se mantiene (el Imputer manejará su NaN en predicción)
     ]
 
     def __init__(self, cleaned_data: pd.DataFrame):
@@ -190,14 +197,7 @@ class PredictiveModel:
         self.X_train = self.X_test = self.y_train = self.y_test = None
 
     def create_target(self):
-        """
-        Construye consumo_duro como variable binaria.
-
-        Usamos (row == 1).any() en lugar de any(row == 1) porque las columnas
-        son tipo Int64 (nullable). La función built-in any() de Python no sabe
-        manejar pd.NA y lanza 'boolean value of NA is ambiguous'.
-        El método pandas .any() sí lo maneja correctamente.
-        """
+        """Construye consumo_duro como variable binaria."""
         sustancias = ['consume_basuco', 'consume_heroina', 'consume_cocaina']
 
         self.data['consumo_duro'] = self.data[sustancias].apply(
@@ -217,12 +217,7 @@ class PredictiveModel:
         return self
 
     def select_predictors(self):
-        """
-        Separa X e y, y hace el split train/test.
-
-        stratify=y garantiza la misma proporción de positivos/negativos
-        en ambos conjuntos, independientemente del azar del split.
-        """
+        """Separa X e y, y hace el split train/test."""
         X = self.data[self.FEATURES].copy()
         y = self.data['consumo_duro'].copy()
 
@@ -233,12 +228,7 @@ class PredictiveModel:
         return self
 
     def build_pipelines(self):
-        """
-        Construye los tres pipelines: preprocesamiento + modelo.
-
-        El Pipeline garantiza que la imputación y el escalado solo aprendan
-        de train y se apliquen igual a test, evitando data leakage.
-        """
+        """Construye los tres pipelines: preprocesamiento + modelo."""
         pre = [
             ('imputer', SimpleImputer(strategy='median')),
             ('scaler',  StandardScaler()),
@@ -259,17 +249,10 @@ class PredictiveModel:
         return self
 
     def train(self):
-        """
-        Entrena cada pipeline con validación cruzada de 5 folds.
-
-        La validación cruzada da una estimación más robusta del rendimiento
-        real que un solo split, porque promedia sobre 5 particiones distintas.
-        Reportamos media ± desviación estándar del AUC-ROC.
-        """
+        """Entrena cada pipeline con validación cruzada de 5 folds."""
         cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
         for nombre, pipeline in self._pipelines.items():
-            # Validación cruzada solo en train (el test no se toca)
             scores_auc = cross_val_score(
                 pipeline, self.X_train, self.y_train,
                 cv=cv, scoring='roc_auc', n_jobs=-1
@@ -279,7 +262,6 @@ class PredictiveModel:
                 cv=cv, scoring='f1', n_jobs=-1
             )
 
-            # Entrenamiento final en todo el train
             pipeline.fit(self.X_train, self.y_train)
             y_pred = pipeline.predict(self.X_test)
             y_prob = pipeline.predict_proba(self.X_test)[:, 1]
@@ -301,14 +283,10 @@ class PredictiveModel:
             print(f"    F1 Test:      {f1_score(self.y_test, y_pred):.3f}")
 
         self.best_model_name = max(self.results, key=lambda k: self.results[k]['auc_test'])
-        print(f"\n  ✅ Mejor modelo: {self.best_model_name} "
-              f"(AUC = {self.results[self.best_model_name]['auc_test']:.3f})")
+        print(f"\n  ✅ Mejor modelo: {self.best_model_name} (AUC = {self.results[self.best_model_name]['auc_test']:.3f})")
         return self
 
     def evaluate(self):
-        """
-        Reporte detallado del mejor modelo: clasificación + matriz de confusión.
-        """
         mejor  = self.results[self.best_model_name]
         y_pred = mejor['y_pred']
 
@@ -317,21 +295,9 @@ class PredictiveModel:
             self.y_test, y_pred,
             target_names=['No consume duro', 'Consume duro']
         ))
-
-        tn, fp, fn, tp = confusion_matrix(self.y_test, y_pred).ravel()
-        print(f"  Verdaderos negativos: {tn}  | Falsos positivos: {fp}")
-        print(f"  Falsos negativos:     {fn}  | Verdaderos positivos: {tp}")
         return self
 
     def feature_importance(self):
-        """
-        Importancia de variables del mejor modelo.
-
-        Random Forest / GBM → reducción de impureza (Gini): qué tan útil
-        fue cada variable para separar las dos clases en los árboles.
-
-        Regresión Logística → coeficientes: dirección e intensidad del efecto.
-        """
         mejor = self.results[self.best_model_name]
         model = mejor['pipeline'].named_steps['model']
 
@@ -351,40 +317,8 @@ class PredictiveModel:
         print(df_imp.to_string(index=False))
         return self
 
-    def save(self, path: str = 'mejor_modelo.joblib'):
-        """
-        Guarda el mejor modelo entrenado en disco.
-
-        joblib es más eficiente que pickle para objetos numpy/sklearn grandes.
-        Al cargarlo después, el modelo está listo para predecir sin reentrenar.
-        """
+    def save(self, path: str = 'outputs/mejor_modelo.joblib'):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(self.results[self.best_model_name]['pipeline'], path)
         print(f"  Modelo guardado en '{path}'")
         return self
-
-    def predict_one(self, inputs: dict) -> dict:
-        """
-        Predice para UNA persona nueva dado un diccionario de sus datos.
-
-        Args:
-            inputs: dict con las 10 variables de FEATURES
-
-        Returns:
-            dict con prediccion, probabilidad y nivel de riesgo
-        """
-        pipeline = self.results[self.best_model_name]['pipeline']
-
-        # DataFrame de una fila con las variables en el orden correcto
-        X_new = pd.DataFrame([inputs])[self.FEATURES]
-
-        prob      = pipeline.predict_proba(X_new)[0][1]
-        prediccion = int(prob >= 0.5)
-        nivel     = 'BAJO' if prob < 0.35 else ('MEDIO' if prob < 0.65 else 'ALTO')
-
-        return {
-            'prediccion':   prediccion,
-            'etiqueta':     'Consume sustancias duras' if prediccion == 1 else 'No consume',
-            'probabilidad': round(float(prob), 4),
-            'nivel_riesgo': nivel,
-        }

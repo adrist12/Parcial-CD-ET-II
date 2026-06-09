@@ -611,6 +611,14 @@ def pagina_prediccion():
         dx = sum([datos.get('dx_hipertension', 2) == 1,
                   datos.get('dx_tuberculosis', 2) == 1,
                   datos.get('dx_vih_sida', 2) == 1])
+        # ── CÓDIGO DE AUDITORÍA TEMPORAL ──────────────────────────────────────
+        st.write("### 🕵️‍♂️ Auditoría de Datos Enviados al Modelo")
+        st.dataframe(X) 
+        
+        # Verificar si hay NaNs inesperados
+        if X.isnull().sum().sum() > 1: # > 1 porque marihuana sí es NaN a propósito
+            st.error("⚠️ ¡Alerta! Hay variables que se están enviando vacías (NaN). Revisa si los nombres en tu diccionario 'datos' coinciden exactamente con la lista 'features'.")
+        # ──────────────────────────────────────────────────────────────────────
 
         st.markdown(f"""
         <div class="stat-grid">

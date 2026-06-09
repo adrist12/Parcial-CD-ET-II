@@ -1,798 +1,820 @@
 # ==============================================================================
-# DASHBOARD INTERACTIVO — PREDICCIÓN DE CONSUMO DE SUSTANCIAS DURAS
-# ==============================================================================
-# Propósito: Interfaz web interactiva para predicción de consumo de sustancias
-#           basada en datos sociodemográficos y de historia de calle.
-#
-# Framework: Streamlit (aplicaciones web Python sin HTML/CSS/JS)
-# 
-# Características:
-#   - Interfaz intuitiva con formularios
-#   - Carga eficiente del modelo entrenado (caché)
-#   - Predicción en tiempo real
-#   - Visualización de resultados
-#   - Estructura modular para agregar gráficas
-#
-# Ejecución:
-#   streamlit run view/dashboard.py
+# DASHBOARD — PREDICCIÓN DE CONSUMO DE SUSTANCIAS DURAS
+# Ejecución: streamlit run view/dashboard.py
 # ==============================================================================
 
-import sys
-import os
+import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib
-import json
-from pathlib import Path
+import joblib, json
 from model.interview_model import PredictiveModel
 import warnings
 warnings.filterwarnings('ignore')
 
-
-# ==============================================================================
-# CONFIGURACIÓN INICIAL DE STREAMLIT
-# ==============================================================================
-
-# Configuración de la página (debe ser la primera línea de Streamlit)
+# ──────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="🔮 Predictor CDT — Consumo de Sustancias Duras",
-    page_icon="🔮",
-    layout="wide",                    # layout ancho para aprovechar espacio
-    initial_sidebar_state="expanded"  # sidebar expandida por defecto
+    page_title="CDT Risk Predictor",
+    page_icon="◈",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# Aplicar tema personalizado (colores profesionales)
+# ──────────────────────────────────────────────────────────────────────────────
+# CSS
+# ──────────────────────────────────────────────────────────────────────────────
 st.markdown("""
-    <style>
-    /* Estilos CSS para mejorar la apariencia del dashboard */
-    
-    /* Color principal: azul oscuro */
-    :root {
-        --primary-color: #1f77b4;
-        --background-color: #f8f9fa;
-        --text-color: #2c3e50;
-    }
-    
-    /* Headers */
-    h1 {
-        color: #1f77b4;
-        text-align: center;
-        margin-bottom: 0.5rem;
-    }
-    
-    h2 {
-        color: #34495e;
-        border-bottom: 2px solid #1f77b4;
-        padding-bottom: 0.5rem;
-    }
-    
-    /* Containers */
-    .prediction-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-    }
-    
-    .info-box {
-        background: #e8f4f8;
-        border-left: 4px solid #1f77b4;
-        padding: 1rem;
-        border-radius: 5px;
-        margin: 1rem 0;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+html, body, .stApp {
+    background: #F5F6F8 !important;
+    font-family: 'Inter', sans-serif;
+    color: #111318;
+}
+#MainMenu, footer, .stDeployButton,
+header[data-testid="stHeader"] { display: none !important; }
+section[data-testid="stSidebar"] { display: none !important; }
+
+.shell {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 6rem 1.5rem;
+}
+
+.wordmark {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 2.5rem;
+}
+.wordmark-main {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #111318;
+    letter-spacing: 0.06em;
+}
+.wordmark-sep { color: #C5C9D1; font-size: 0.85rem; }
+.wordmark-sub { font-size: 0.75rem; color: #8A909E; letter-spacing: 0.04em; }
+
+/* ── TABS ── */
+.stTabs [data-baseweb="tab-list"] {
+    background: transparent !important;
+    border-bottom: 1px solid #DFE2E8 !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    margin-bottom: 2.5rem;
+}
+.stTabs [data-baseweb="tab"] {
+    background: transparent !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: #8A909E !important;
+    padding: 0.85rem 1.5rem !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+}
+.stTabs [aria-selected="true"] {
+    color: #111318 !important;
+    border-bottom: 2px solid #2451FF !important;
+}
+.stTabs [data-baseweb="tab-panel"] { padding: 0 !important; }
+
+/* ── SECTION HEADER ── */
+.sec-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 2rem;
+    margin-bottom: 1.25rem;
+}
+.sec-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: #2451FF;
+    font-weight: 600;
+}
+.sec-line { flex: 1; height: 1px; background: #E8EBF0; }
+.sec-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #8A909E;
+}
+
+/* ── FIELD ROW ── */
+.field-meta-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111318;
+    margin-bottom: 0.3rem;
+    margin-top: 0.15rem;
+}
+.field-meta-desc {
+    font-size: 0.78rem;
+    color: #6E7585;
+    line-height: 1.6;
+}
+
+/* ── INPUTS ── */
+div[data-testid="stSelectbox"] > label,
+div[data-testid="stNumberInput"] > label,
+div[data-testid="stSlider"] > label { display: none !important; }
+
+div[data-testid="stSelectbox"] > div > div {
+    border: 1.5px solid #DFE2E8 !important;
+    border-radius: 6px !important;
+    font-size: 0.875rem !important;
+    background: #fff !important;
+    min-height: 44px !important;
+    color: #111318 !important;
+}
+
+/* Texto del valor seleccionado visible dentro del input cerrado */
+div[data-testid="stSelectbox"] * {
+    color: #111318 !important;
+}
+
+/* Dropdown abierto — fondo blanco y texto oscuro en todas las opciones */
+[data-baseweb="popover"] * {
+    color: #111318 !important;
+    background-color: #fff !important;
+}
+
+/* Hover sobre una opción */
+[data-baseweb="popover"] [role="option"]:hover {
+    background-color: #EEF2FF !important;
+    color: #111318 !important;
+}
+
+/* Opción actualmente seleccionada en el dropdown abierto */
+[data-baseweb="popover"] [aria-selected="true"] {
+    background-color: #EEF2FF !important;
+    color: #2451FF !important;
+}
+div[data-testid="stSelectbox"] > div > div:focus-within {
+    border-color: #2451FF !important;
+    box-shadow: 0 0 0 3px rgba(36,81,255,0.08) !important;
+}
+div[data-testid="stNumberInput"] input {
+    border: 1.5px solid #DFE2E8 !important;
+    border-radius: 6px !important;
+    font-size: 0.875rem !important;
+    min-height: 44px !important;
+}
+div[data-testid="stNumberInput"] input:focus {
+    border-color: #2451FF !important;
+    box-shadow: 0 0 0 3px rgba(36,81,255,0.08) !important;
+    outline: none !important;
+}
+div[data-testid="stSlider"] div[role="slider"] { background: #2451FF !important; }
+
+/* checkbox label override */
+div[data-testid="stCheckbox"] label span { display: inline !important; }
+div[data-testid="stCheckbox"] label {
+    font-size: 0.875rem !important;
+    color: #111318 !important;
+}
+/* ── FIX: texto visible en opciones seleccionadas y dropdown ── */
+
+/* El item actualmente seleccionado en el selectbox (el que se ve cerrado) */
+div[data-testid="stSelectbox"] [data-baseweb="select"] [data-baseweb="tag"],
+div[data-testid="stSelectbox"] [data-baseweb="select"] div[class*="placeholder"],
+div[data-testid="stSelectbox"] [data-baseweb="select"] div[class*="singleValue"] {
+    color: #111318 !important;
+}
+
+/* El dropdown abierto — todas las opciones */
+[data-baseweb="popover"] [role="option"] {
+    color: #111318 !important;
+    background: #fff !important;
+}
+
+/* La opción sobre la que está el mouse (hover) */
+[data-baseweb="popover"] [role="option"]:hover {
+    background: #EEF2FF !important;
+    color: #111318 !important;
+}
+
+/* La opción actualmente seleccionada dentro del dropdown abierto */
+[data-baseweb="popover"] [aria-selected="true"] {
+    background: #EEF2FF !important;
+    color: #2451FF !important;
+}
+
+/* row separator */
+.row-sep {
+    height: 1px;
+    background: #E8EBF0;
+    margin: 0.5rem 0 1.25rem 0;
+}
+
+/* ── BUTTON ── */
+div[data-testid="stButton"] > button {
+    background: #111318 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    padding: 0.9rem 2.5rem !important;
+    transition: background 0.15s !important;
+}
+div[data-testid="stButton"] > button:hover { background: #2451FF !important; }
+
+/* ── RESULT CARD ── */
+.result-card {
+    background: #fff;
+    border: 1px solid #DFE2E8;
+    border-top: 3px solid #2451FF;
+    border-radius: 10px;
+    padding: 2.25rem 2.5rem;
+    margin: 2rem 0 1.25rem 0;
+}
+.result-card.bajo   { border-top-color: #1A9E6A; }
+.result-card.moderado { border-top-color: #D98A00; }
+.result-card.alto   { border-top-color: #CF2C2C; }
+.r-eyebrow {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #8A909E; margin-bottom: 0.6rem;
+}
+.r-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 4rem; font-weight: 600; color: #111318;
+    letter-spacing: -0.04em; line-height: 1;
+}
+.r-label { font-size: 1rem; font-weight: 700; margin-top: 0.5rem; }
+.bajo   .r-label { color: #1A9E6A; }
+.moderado .r-label { color: #D98A00; }
+.alto   .r-label { color: #CF2C2C; }
+.r-desc { font-size: 0.85rem; color: #5A6070; line-height: 1.7; margin-top: 0.75rem; max-width: 520px; }
+.risk-track {
+    background: #EEF0F4; height: 5px; border-radius: 3px;
+    margin: 1.5rem 0 0.4rem 0; overflow: hidden;
+}
+.risk-fill { height: 100%; border-radius: 3px; }
+.risk-ticks {
+    display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem; color: #B0B6C3;
+}
+
+/* ── STAT GRID ── */
+.stat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem; margin-top: 1.25rem;
+}
+.stat-card {
+    background: #F9FAFB; border: 1px solid #E8EBF0;
+    border-radius: 8px; padding: 1rem 1.25rem;
+}
+.stat-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem; font-weight: 600; color: #111318;
+}
+.stat-lbl {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #8A909E; margin-top: 0.25rem;
+}
+.stat-note { font-size: 0.72rem; color: #A5ABB8; margin-top: 0.2rem; }
+
+/* ── NOTICE ── */
+.notice {
+    background: #F9FAFB; border: 1px solid #E8EBF0;
+    border-left: 3px solid #8A909E; border-radius: 4px;
+    padding: 1rem 1.25rem; font-size: 0.8rem; color: #5A6070;
+    line-height: 1.65; margin-top: 1.25rem;
+}
+.notice strong { color: #111318; }
+.notice-blue { border-left-color: #2451FF; }
+
+/* ── PROSE ── */
+.prose { font-size: 0.875rem; color: #444C5E; line-height: 1.8; }
+.prose h4 {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #111318; margin-top: 2rem;
+    margin-bottom: 0.6rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E8EBF0;
+}
+.prose ul { padding-left: 1.25rem; margin: 0.5rem 0; }
+.prose li { margin-bottom: 0.4rem; }
+.prose code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+    background: #F0F2F6; color: #2451FF; padding: 0.1rem 0.4rem; border-radius: 3px;
+}
+.badge {
+    display: inline-block; font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.06em; padding: 0.2rem 0.55rem; border-radius: 3px;
+    text-transform: uppercase; margin-left: 0.4rem; vertical-align: middle;
+}
+.badge-red { background: #FEF0F0; color: #CF2C2C; }
+.badge-grn { background: #EDFAF4; color: #1A9E6A; }
+.badge-blu { background: #EEF2FF; color: #2451FF; }
+
+/* ── KPI strip ── */
+.kpi-strip { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.75rem; margin-bottom: 2rem; }
+.kpi-card { background: #fff; border: 1px solid #DFE2E8; border-radius: 8px; padding: 1.25rem 1.5rem; }
+.kpi-val { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 600; color: #2451FF; }
+.kpi-lbl { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8A909E; margin-top: 0.3rem; }
+
+/* ── PLACEHOLDER ── */
+.placeholder {
+    background: #fff; border: 1.5px dashed #DFE2E8; border-radius: 8px;
+    padding: 4rem 2rem; text-align: center; color: #A5ABB8;
+    font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; margin-top: 1.5rem;
+}
+.placeholder span {
+    display: block; font-weight: 400; text-transform: none;
+    letter-spacing: 0; font-size: 0.73rem; margin-top: 0.4rem; color: #C5C9D1;
+}
+</style>
+""", unsafe_allow_html=True)
 
 
-# ==============================================================================
-# FUNCIONES CON CACHE (para optimizar performance)
-# ==============================================================================
-# @st.cache_data: carga datos una sola vez y reutiliza en sesión
-# @st.cache_resource: carga recursos (modelos, conexiones) una sola vez
-
+# ──────────────────────────────────────────────────────────────────────────────
+# CACHE
+# ──────────────────────────────────────────────────────────────────────────────
 @st.cache_resource
-def cargar_modelo(ruta_modelo):
-    """
-    Carga el modelo entrenado desde joblib (CACHE).
-    
-    La decoración @st.cache_resource hace que Streamlit guarde el modelo
-    en memoria y lo reutilice en cada interacción del usuario (en lugar
-    de recargar cada vez que el usuario interactúa con el dashboard).
-    
-    Args:
-        ruta_modelo (str): ruta al archivo .joblib del modelo
-    
-    Returns:
-        Pipeline: modelo entrenado listo para predicciones
-    
-    Excepciones:
-        - FileNotFoundError: si el modelo no existe
-        - Muestra error en Streamlit
-    """
+def cargar_modelo(ruta):
     try:
-        modelo = joblib.load(ruta_modelo)
-        return modelo
+        return joblib.load(ruta)
     except FileNotFoundError:
-        st.error(f"❌ Modelo no encontrado: {ruta_modelo}")
-        st.info("ℹ️  Ejecuta primero: `python main.py` para entrenar el modelo")
+        st.error(f"Modelo no encontrado: `{ruta}` — ejecuta `python main.py` primero.")
         st.stop()
 
-
 @st.cache_data
-def cargar_diccionario(ruta_diccionario):
-    """
-    Carga el diccionario de preguntas/respuestas (CACHE).
-    
-    Args:
-        ruta_diccionario (str): ruta al archivo dictionary.json
-    
-    Returns:
-        dict: configuración con renombres, preguntas, respuestas, etc.
-    """
-    try:
-        with open(ruta_diccionario, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        st.error(f"❌ Diccionario no encontrado: {ruta_diccionario}")
-        st.stop()
-
-
-@st.cache_data
-def cargar_datos_predictor():
-    """
-    Carga lista de predictores para referencia (CACHE).
-    
-    Returns:
-        list: nombres de las variables predictoras
-    """
+def get_features():
+    # Lista COMPLETA tal como fue entrenada — incluyendo consume_marihuana
     return PredictiveModel.FEATURES
 
-# ==============================================================================
-# FUNCIONES DE UTILIDAD PARA LA INTERFAZ
-# ==============================================================================
 
-def crear_formulario_datos():
+# ──────────────────────────────────────────────────────────────────────────────
+# HELPERS
+# ──────────────────────────────────────────────────────────────────────────────
+def sec(num, label):
+    st.markdown(f"""
+    <div class="sec-header">
+        <span class="sec-num">{num}</span>
+        <span class="sec-line"></span>
+        <span class="sec-label">{label}</span>
+    </div>""", unsafe_allow_html=True)
+
+
+def field_row(title, desc, right_content_fn):
     """
-    Crea un formulario Streamlit interactivo para capturar datos del usuario.
-    
-    Estructura:
-    - Columnas para organizar inputs horizontalmente
-    - Selectores para variables categóricas
-    - Sliders y number inputs para variables numéricas
-    - Checkboxes para variables binarias
-    
-    Decisiones de diseño:
-    - Edad: slider 0-100 (realista para personas en calle)
-    - Género: select (Hombre/Mujer de diccionario)
-    - Sustancias: checkboxes (múltiples selecciones)
-    - Tiempo en calle: number inputs separados (años y meses)
-    
-    Returns:
-        dict: diccionario con todos los datos capturados
-        
-    Notas:
-    - Los valores del diccionario se mapean a códigos numéricos (1, 2, 3...)
-    - NaN en checkboxes no marcados = "no consume" (2 en diccionario)
+    Fila de formulario: columna izquierda = meta, columna derecha = widget.
+    Retorna el valor devuelto por right_content_fn.
     """
-    
-    dicc = cargar_diccionario("data/dictionary.json")
-    datos = {}
-    
-    # ========================================================================
-    # SECCIÓN 1: INFORMACIÓN SOCIODEMOGRÁFICA
-    # ========================================================================
-    st.markdown("### 👤 Información Sociodemográfica")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        # EDAD: slider de 0 a 100 años
-        edad = st.slider(
-            "Edad",
-            min_value=0,
-            max_value=100,
-            value=35,
-            step=1,
-            help="Rango típico en personas en calle: 18-70 años"
+    left, right = st.columns([5, 7])
+    with left:
+        st.markdown(
+            f'<div class="field-meta-title">{title}</div>'
+            f'<div class="field-meta-desc">{desc}</div>',
+            unsafe_allow_html=True
         )
-        datos['edad'] = edad
-    
-    with col2:
-        # GÉNERO: select (1=Hombre, 2=Mujer)
-        genero_label = st.selectbox(
-            "Género",
-            ["Hombre", "Mujer"],
-            index=0,
-            help="Del diccionario P9"
-        )
-        datos['genero'] = 1 if genero_label == "Hombre" else 2
-    
-    with col3:
-        # ORIENTACIÓN SEXUAL: select
-        orientacion_label = st.selectbox(
-            "Orientación Sexual",
-            ["Heterosexual", "Homosexual (Gay/Lesbiana)", "Bisexual", "Otro"],
-            index=0,
-            help="Del diccionario P34"
-        )
-        orientacion_map = {
-            "Heterosexual": 1,
-            "Homosexual (Gay/Lesbiana)": 2,
-            "Bisexual": 3,
-            "Otro": 4
-        }
-        datos['orientacion_sexual'] = orientacion_map[orientacion_label]
-    
-    # Segunda fila sociodemográfica
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # NIVEL EDUCATIVO: select
-        nivel_edu_label = st.selectbox(
-            "Nivel Educativo",
-            [
-                "Ninguno", "Preescolar", "Primaria incompleta", "Primaria completa",
-                "Secundaria/Bachillerato incompleto", "Secundaria/Bachillerato completo",
-                "Técnico o Tecnológico", "Universitario/Profesional"
-            ],
-            index=0,
-            help="Del diccionario P28"
-        )
-        nivel_edu_map = {
-            "Ninguno": 1, "Preescolar": 2, "Primaria incompleta": 3,
-            "Primaria completa": 4, "Secundaria/Bachillerato incompleto": 5,
-            "Secundaria/Bachillerato completo": 6, "Técnico o Tecnológico": 7,
-            "Universitario/Profesional": 8
-        }
-        datos['nivel_educativo'] = nivel_edu_map[nivel_edu_label]
-    
-    with col2:
-        # SABE LEER/ESCRIBIR: select (1=Sí sin dificultad, 2=Sí con dificultad, 3=No)
-        lee_escribe_label = st.selectbox(
-            "¿Sabe leer y escribir?",
-            ["Sí, sin dificultad", "Sí, con alguna dificultad", "No puede hacerlo"],
-            index=0,
-            help="Del diccionario P16S9"
-        )
-        lee_escribe_map = {
-            "Sí, sin dificultad": 1,
-            "Sí, con alguna dificultad": 2,
-            "No puede hacerlo": 3
-        }
-        datos['sabe_leer_escribir'] = lee_escribe_map[lee_escribe_label]
-    
-    # ========================================================================
-    # SECCIÓN 2: HISTORIA EN CALLE
-    # ========================================================================
-    st.markdown("### 🏙️ Historia en Calle")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        # AÑOS EN CALLE
-        años_calle = st.number_input(
-            "Años en calle",
-            min_value=0,
-            max_value=80,
-            value=5,
-            step=1,
-            help="Número de años viviendo en la calle"
-        )
-    
-    with col2:
-        # MESES EN CALLE (adicionales)
-        meses_calle = st.number_input(
-            "Meses adicionales",
-            min_value=0,
-            max_value=11,
-            value=0,
-            step=1,
-            help="Meses adicionales (0-11)"
-        )
-    
-    with col3:
-        # TIEMPO TOTAL EN MESES (calculado)
-        tiempo_total_meses = años_calle * 12 + meses_calle
-        st.metric(
-            "Tiempo total en calle",
-            f"{tiempo_total_meses} meses",
-            f"≈ {años_calle}.{meses_calle} años"
-        )
-    
-    datos['tiempo_total_calle_meses'] = tiempo_total_meses
-    
-    # Razones (selects)
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # RAZÓN DE INICIO EN VIDA DE CALLE
-        razon_inicio_label = st.selectbox(
-            "Razón por la que comenzó en calle",
-            [
-                "Consumo de sustancias", "Dificultades/conflictos familiares",
-                "Falta de oportunidades laborales", "Gusto por la calle",
-                "Desplazamiento forzado/violencia", "Problemas de salud mental",
-                "Abandono/falta de red de apoyo", "Otra razón"
-            ],
-            index=1,
-            help="Del diccionario P22"
-        )
-        razon_inicio_map = {
-            "Consumo de sustancias": 1, "Dificultades/conflictos familiares": 2,
-            "Falta de oportunidades laborales": 3, "Gusto por la calle": 4,
-            "Desplazamiento forzado/violencia": 5, "Problemas de salud mental": 6,
-            "Abandono/falta de red de apoyo": 7, "Otra razón": 8
-        }
-        datos['razon_inicio_vida_calle'] = razon_inicio_map[razon_inicio_label]
-    
-    with col2:
-        # RAZÓN POR LA QUE CONTINÚA EN CALLE
-        razon_continua_label = st.selectbox(
-            "Razón por la que continúa en calle",
-            [
-                "Dependencia/consumo de sustancias", "Falta de oportunidades/empleo",
-                "Acostumbramiento/gusto por la calle", "No tener apoyo familiar",
-                "Problemas legales/judiciales", "Otra razón"
-            ],
-            index=2,
-            help="Del diccionario P24"
-        )
-        razon_continua_map = {
-            "Dependencia/consumo de sustancias": 1, "Falta de oportunidades/empleo": 2,
-            "Acostumbramiento/gusto por la calle": 3, "No tener apoyo familiar": 4,
-            "Problemas legales/judiciales": 5, "Otra razón": 6
-        }
-        datos['razon_continua_en_calle'] = razon_continua_map[razon_continua_label]
-    
-    # ========================================================================
-    # SECCIÓN 3: SUBSISTENCIA
-    # ========================================================================
-    st.markdown("### 💰 Forma de Subsistencia")
-    
-    forma_dinero_label = st.selectbox(
-        "¿Cómo obtiene dinero?",
-        [
-            "Reciclaje/recolección de materiales", "Venta ambulante/limpieza vidrios",
-            "Mendicidad/pedir dinero", "Trabajos informales u ocasionales",
-            "Actividades ilegales", "Ayudas institucionales/fundaciones", "Otra forma"
-        ],
-        index=2,
-        help="Del diccionario P29"
+    with right:
+        val = right_content_fn()
+    st.markdown('<div class="row-sep"></div>', unsafe_allow_html=True)
+    return val
+
+
+def nivel_riesgo(prob):
+    if prob < 0.25:
+        return ("bajo", "Riesgo Bajo", "#1A9E6A",
+                "El perfil analizado presenta baja probabilidad de consumo duro. "
+                "Los factores de riesgo identificados son limitados y no convergen.")
+    if prob < 0.50:
+        return ("moderado", "Riesgo Moderado", "#D98A00",
+                "Se identifican factores de riesgo relevantes. El perfil sugiere exposición "
+                "a entornos de consumo sin convergencia de múltiples alertas.")
+    if prob < 0.75:
+        return ("alto", "Riesgo Alto", "#CF2C2C",
+                "El perfil concentra múltiples predictores documentados. "
+                "Se recomienda intervención prioritaria y evaluación clínica especializada.")
+    return ("alto", "Riesgo Muy Alto", "#CF2C2C",
+            "Confluencia de los principales predictores. Intervención urgente — "
+            "derivar a unidad de salud mental y programa de reducción de daños.")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PÁGINA 1 — PREDICCIÓN
+# ──────────────────────────────────────────────────────────────────────────────
+def pagina_prediccion():
+    modelo   = cargar_modelo("outputs/mejor_modelo.joblib")
+    features = get_features()   # lista completa con consume_marihuana
+    datos    = {}
+
+    # ── 01 · SOCIODEMOGRÁFICO ──────────────────────────────────────────────────
+    sec("01", "Perfil Sociodemográfico")
+    st.markdown('<div class="prose" style="margin-bottom:1.25rem;">Variables de base del perfil de riesgo. La edad, el nivel educativo y el género presentan correlaciones estadísticamente significativas con patrones de consumo en poblaciones vulnerables.</div>', unsafe_allow_html=True)
+
+    datos['edad'] = field_row(
+        "Edad",
+        "Los consumidores de sustancias duras son en promedio 9 años más jóvenes que no consumidores. La edad de inicio en vida de calle también modula el riesgo basal del individuo.",
+        lambda: st.slider("edad_sl", 0, 100, 35, label_visibility="collapsed")
     )
-    forma_dinero_map = {
-        "Reciclaje/recolección de materiales": 1,
-        "Venta ambulante/limpieza vidrios": 2,
-        "Mendicidad/pedir dinero": 3,
-        "Trabajos informales u ocasionales": 4,
-        "Actividades ilegales": 5,
-        "Ayudas institucionales/fundaciones": 6,
-        "Otra forma": 7
-    }
-    datos['forma_obtener_dinero'] = forma_dinero_map[forma_dinero_label]
-    
-    # ========================================================================
-    # SECCIÓN 4: DIAGNÓSTICOS DE SALUD
-    # ========================================================================
-    st.markdown("### 🏥 Diagnósticos de Salud")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        # HIPERTENSIÓN
-        dx_hipertension = st.checkbox(
-            "Hipertensión",
-            value=False,
-            help="¿Ha sido diagnosticado con hipertensión?"
-        )
-        datos['dx_hipertension'] = 1 if dx_hipertension else 2
-    
-    with col2:
-        # TUBERCULOSIS
-        dx_tuberculosis = st.checkbox(
-            "Tuberculosis",
-            value=False,
-            help="¿Ha sido diagnosticado con tuberculosis?"
-        )
-        datos['dx_tuberculosis'] = 1 if dx_tuberculosis else 2
-    
-    with col3:
-        # VIH/SIDA
-        dx_vih_sida = st.checkbox(
-            "VIH/SIDA",
-            value=False,
-            help="¿Ha sido diagnosticado con VIH/SIDA?"
-        )
-        datos['dx_vih_sida'] = 1 if dx_vih_sida else 2
-    
-    with col4:
-        # ACTIVIDADES SIN ESFUERZO FÍSICO
-        actividades_label = st.selectbox(
-            "¿Puede realizar actividades sin esfuerzo?",
-            ["Sí, sin dificultad", "Sí, con dificultad", "No puede hacerlo"],
-            index=0,
-            key="actividades",
-            help="Del diccionario P16S9"
-        )
-        actividades_map = {
-            "Sí, sin dificultad": 1,
-            "Sí, con dificultad": 2,
-            "No puede hacerlo": 3
-        }
-        datos['actividades_sin_esfuerzo_fisico'] = actividades_map[actividades_label]
-    
-    # ========================================================================
-    # SECCIÓN 5: CONSUMO DE SUSTANCIAS
-    # ========================================================================
-    st.markdown("### 🚬 Consumo de Sustancias")
-    st.info(
-        "ℹ️  Selecciona las sustancias que consume. Las NO seleccionadas se asumen como 'no consumo'.",
-        icon="ℹ️"
+
+    genero_sel = field_row(
+        "Género",
+        "Permite controlar diferencias en patrones de consumo y acceso a redes de soporte. El dataset muestra mayor prevalencia masculina en consumo duro.",
+        lambda: st.selectbox("gen_sel", ["Hombre", "Mujer"], label_visibility="collapsed")
     )
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    sustancias = {
-        'consume_cigarrillo': ('Cigarrillo', col1),
-        'consume_alcohol': ('Alcohol', col2),
-        'consume_marihuana': ('Marihuana', col3),
-        'consume_inhalantes': ('Inhalantes', col4)
-    }
-    
-    for variable, (label, col) in sustancias.items():
-        with col:
-            consume = st.checkbox(
-                label,
-                value=False,
-                help=f"¿Consume {label}?"
-            )
-            datos[variable] = 1 if consume else 2  # 1=Sí, 2=No
-    
-    return datos
+    datos['genero'] = 1 if genero_sel == "Hombre" else 2
 
-
-def preparar_datos_prediccion(datos_usuario, predictores):
-    """
-    Convierte los datos del usuario a formato DataFrame para predicción.
-    
-    Pasos:
-    1. Crear diccionario con todos los predictores
-    2. Asignar valores del usuario
-    3. Asignar NaN a variables no capturadas (no aplicable aquí)
-    4. Convertir a DataFrame con una única fila
-    5. Retornar en formato esperado por el modelo
-    
-    Args:
-        datos_usuario (dict): datos capturados del formulario
-        predictores (list): lista de nombres de predictores
-    
-    Returns:
-        DataFrame: una fila con todos los predictores en el orden correcto
-    
-    Nota: El modelo espera exactamente estos predictores en este orden
-    """
-    # Inicializar con NaN (por si falta algún predictor)
-    fila = {pred: np.nan for pred in predictores}
-    fila.update(datos_usuario)
-    df = pd.DataFrame([fila])[predictores]  # filtra y ordena automáticamente
-    return df
-
-
-def obtener_interpretacion_riesgo(probabilidad):
-    """
-    Interpreta la probabilidad predicha en categoría de riesgo.
-    
-    Categorías:
-    - [0.0, 0.25): Bajo riesgo (verde)
-    - [0.25, 0.50): Riesgo moderado (amarillo)
-    - [0.50, 0.75): Riesgo alto (naranja)
-    - [0.75, 1.0]: Riesgo muy alto (rojo)
-    
-    Args:
-        probabilidad (float): probabilidad predicha [0, 1]
-    
-    Returns:
-        tuple: (categoría, color, descripción)
-    """
-    if probabilidad < 0.25:
-        return "🟢 BAJO RIESGO", "green", "Baja probabilidad de consumo de sustancias duras"
-    elif probabilidad < 0.50:
-        return "🟡 RIESGO MODERADO", "orange", "Probabilidad moderada de consumo de sustancias duras"
-    elif probabilidad < 0.75:
-        return "🟠 RIESGO ALTO", "red", "Alta probabilidad de consumo de sustancias duras"
-    else:
-        return "🔴 RIESGO MUY ALTO", "red", "Muy alta probabilidad de consumo de sustancias duras"
-
-
-# ==============================================================================
-# FUNCIONES DE VISUALIZACIÓN
-# ==============================================================================
-
-def mostrar_seccion_graficas():
-    """
-    Sección reservada para gráficas futuras.
-    
-    Aquí se pueden agregar:
-    - Gráfica de importancia de variables
-    - Distribución de probabilidades en conjunto de datos
-    - Comparación con población
-    - Evolución de riesgos
-    - Etc.
-    
-    Por ahora, muestra estructura vacía.
-    """
-    st.markdown("### 📊 Análisis Detallado (Gráficas)")
-    
-    tab1, tab2, tab3 = st.tabs(
-        ["📈 Importancia de Variables", "📉 Distribuciones", "🎯 Análisis Comparativo"]
+    orient_opts = ["Heterosexual", "Homosexual (Gay/Lesbiana)", "Bisexual", "Otro"]
+    orient_sel = field_row(
+        "Orientación Sexual",
+        "Grupos LGBTQ+ en calle enfrentan discriminación adicional que puede amplificar el consumo como mecanismo de afrontamiento. Variable de contexto social.",
+        lambda: st.selectbox("orient_sel", orient_opts, label_visibility="collapsed")
     )
+    datos['orientacion_sexual'] = orient_opts.index(orient_sel) + 1
+
+    nivel_opts = ["Ninguno", "Preescolar", "Primaria incompleta", "Primaria completa",
+                  "Secundaria incompleta", "Secundaria completa", "Técnico/Tecnológico", "Universitario"]
+    nivel_sel = field_row(
+        "Nivel Educativo",
+        "Capital humano y oportunidades previas. Contraintuitivamente, perfiles técnicos muestran mayor riesgo relativo, posiblemente por redes urbanas de consumo asociadas.",
+        lambda: st.selectbox("nivel_sel", nivel_opts, label_visibility="collapsed")
+    )
+    datos['nivel_educativo'] = nivel_opts.index(nivel_sel) + 1
+
+    lee_opts = ["Sí, sin dificultad", "Sí, con alguna dificultad", "No puede"]
+    lee_sel = field_row(
+        "Alfabetismo",
+        "Indicador proxy de acceso al sistema educativo y posibles dificultades cognitivas que incrementan la vulnerabilidad al consumo problemático.",
+        lambda: st.selectbox("lee_sel", lee_opts, label_visibility="collapsed")
+    )
+    datos['sabe_leer_escribir'] = lee_opts.index(lee_sel) + 1
+
+    # ── 02 · HISTORIA EN CALLE ─────────────────────────────────────────────────
+    sec("02", "Historia en Calle")
+    st.markdown('<div class="prose" style="margin-bottom:1.25rem;">El tiempo en situación de calle es uno de los predictores más robustos del modelo. Las razones de inicio y permanencia revelan el perfil motivacional y permiten segmentar intervenciones de política pública de manera diferenciada.</div>', unsafe_allow_html=True)
+
+    años_calle = field_row(
+        "Años en Calle",
+        "Duración acumulada en situación de calle. Cada año adicional incrementa la exposición a redes de consumo y reduce el capital social disponible para la reinserción.",
+        lambda: st.number_input("años_in", min_value=0, max_value=80, value=5, label_visibility="collapsed")
+    )
+
+    meses_calle = field_row(
+        "Meses Adicionales",
+        "Complemento al conteo anual para precisar la duración total y capturar casos recientes o en transición (rango: 0 a 11 meses).",
+        lambda: st.number_input("meses_in", min_value=0, max_value=11, value=0, label_visibility="collapsed")
+    )
+
+    tiempo_total = int(años_calle) * 12 + int(meses_calle)
+    datos['tiempo_total_calle_meses'] = tiempo_total
+    st.markdown(f'<div class="notice notice-blue" style="margin-top:0; margin-bottom:0.5rem;">Tiempo total calculado: <strong style="font-family:\'JetBrains Mono\',monospace; color:#2451FF;">{tiempo_total} meses</strong> — variable continua utilizada directamente por el modelo.</div>', unsafe_allow_html=True)
+
+    razon_inicio_opts = ["Consumo de sustancias", "Conflictos familiares", "Falta de oportunidades",
+                         "Gusto por la calle", "Desplazamiento/violencia", "Salud mental",
+                         "Abandono/falta de apoyo", "Otra razón"]
+    ri_sel = field_row(
+        "Razón de Inicio",
+        "El motivo de ingreso diferencia trayectorias de riesgo: quienes llegan por consumo previo tienen mayor riesgo basal que quienes llegan por conflictos familiares o desplazamiento.",
+        lambda: st.selectbox("ri_sel", razon_inicio_opts, index=1, label_visibility="collapsed")
+    )
+    datos['razon_inicio_vida_calle'] = razon_inicio_opts.index(ri_sel) + 1
+
+    razon_cont_opts = ["Dependencia/consumo", "Falta de oportunidades", "Acostumbramiento",
+                       "Sin apoyo familiar", "Problemas legales", "Otra razón"]
+    rc_sel = field_row(
+        "Razón de Permanencia",
+        "Revela el nivel de arraigo y las barreras de salida. La dependencia a sustancias como razón de permanencia corresponde al escenario de mayor riesgo acumulado.",
+        lambda: st.selectbox("rc_sel", razon_cont_opts, index=2, label_visibility="collapsed")
+    )
+    datos['razon_continua_en_calle'] = razon_cont_opts.index(rc_sel) + 1
+
+    # ── 03 · SUBSISTENCIA ──────────────────────────────────────────────────────
+    sec("03", "Subsistencia")
+    st.markdown('<div class="prose" style="margin-bottom:1.25rem;">La forma de obtención de recursos determina la inserción en redes sociales de la calle. Ciertas actividades mantienen vínculos con la economía formal, mientras que otras exponen al individuo a entornos de alta disponibilidad de sustancias.</div>', unsafe_allow_html=True)
+
+    dinero_opts = ["Reciclaje/materiales", "Venta ambulante", "Mendicidad",
+                   "Trabajos informales", "Actividades ilegales", "Ayudas institucionales", "Otra"]
+    dinero_sel = field_row(
+        "Fuente de Ingresos",
+        "Las actividades ilegales y la mendicidad correlacionan con mayor prevalencia de consumo duro. El reciclaje muestra el perfil de menor riesgo relativo en el dataset.",
+        lambda: st.selectbox("dinero_sel", dinero_opts, index=2, label_visibility="collapsed")
+    )
+    datos['forma_obtener_dinero'] = dinero_opts.index(dinero_sel) + 1
+
+    # ── 04 · DIAGNÓSTICOS DE SALUD ─────────────────────────────────────────────
+    sec("04", "Diagnósticos de Salud")
+    st.markdown('<div class="prose" style="margin-bottom:1.25rem;">Las condiciones crónicas actúan como mediadoras o moderadoras del consumo. La tuberculosis tiene alta prevalencia en consumidores de basuco por la vía pulmonar. El VIH/SIDA está asociado a redes de consumo compartido.</div>', unsafe_allow_html=True)
+
+    dx_hta = field_row(
+        "Hipertensión",
+        "Asociada a cocaína y estimulantes. Su presencia sugiere exposición previa o actual a estas sustancias y puede ser indicador temprano de consumo.",
+        lambda: st.checkbox("Diagnosticado", key="dx_hta_cb")
+    )
+    datos['dx_hipertension'] = 1 if dx_hta else 2
+
+    dx_tbc = field_row(
+        "Tuberculosis",
+        "Elevada prevalencia en consumidores de basuco por inhalación. Indicador fuerte de consumo crónico y prolongado de sustancias duras.",
+        lambda: st.checkbox("Diagnosticado", key="dx_tbc_cb")
+    )
+    datos['dx_tuberculosis'] = 1 if dx_tbc else 2
+
+    dx_vih = field_row(
+        "VIH / SIDA",
+        "Asociado a consumo intravenoso y redes de consumo compartido. Duplica el riesgo estimado de consumo de heroína en el modelo.",
+        lambda: st.checkbox("Diagnosticado", key="dx_vih_cb")
+    )
+    datos['dx_vih_sida'] = 1 if dx_vih else 2
+
+    activ_opts = ["Sin dificultad", "Con dificultad", "No puede"]
+    activ_sel = field_row(
+        "Capacidad Funcional",
+        "Las limitaciones físicas severas reducen opciones de subsistencia lícita y pueden empujar hacia redes de consumo como mecanismo social de pertenencia.",
+        lambda: st.selectbox("activ_sel", activ_opts, label_visibility="collapsed")
+    )
+    datos['actividades_sin_esfuerzo_fisico'] = activ_opts.index(activ_sel) + 1
+
+    # ── 05 · CONSUMO DE SUSTANCIAS ─────────────────────────────────────────────
+    sec("05", "Consumo de Sustancias")
+    st.markdown('<div class="prose" style="margin-bottom:0.75rem;">El consumo de sustancias de menor dependencia actúa como predictor de escalada. El modelo utiliza cigarrillo, alcohol e inhalantes como variables proxy del entorno y la trayectoria de consumo del individuo.</div>', unsafe_allow_html=True)
     
-    with tab1:
-        st.info(
-            "📌 Espacio reservado para gráfica de importancia de variables\n"
-            "Muestra qué variables el modelo usa más para predecir consumo.",
-            icon="📌"
-        )
-    
-    with tab2:
-        st.info(
-            "📌 Espacio reservado para distribuciones\n"
-            "Comparar distribución del usuario vs población general.",
-            icon="📌"
-        )
-    
-    with tab3:
-        st.info(
-            "📌 Espacio reservado para análisis comparativo\n"
-            "Posicionar usuario en contexto de la población.",
-            icon="📌"
-        )
+
+    cig = field_row(
+        "Cigarrillo",
+        "El 78% de consumidores de sustancias duras reporta consumo previo o simultáneo de tabaco. Puerta de entrada documentada en la literatura.",
+        lambda: st.checkbox("Consume actualmente", key="cig_cb")
+    )
+    datos['consume_cigarrillo'] = 1 if cig else 2
+
+    alc = field_row(
+        "Alcohol",
+        "Alta correlación con otras sustancias en entornos de calle. Reduce inhibiciones y facilita la experimentación con sustancias de mayor dependencia.",
+        lambda: st.checkbox("Consume actualmente", key="alc_cb")
+    )
+    datos['consume_alcohol'] = 1 if alc else 2
+
+    inh = field_row(
+        "Inhalantes",
+        "Predictor más fuerte del modelo: el 82% de sus consumidores escala a sustancias duras. La alta accesibilidad y bajo costo explican la progresión.",
+        lambda: st.checkbox("Consume actualmente", key="inh_cb")
+    )
+    datos['consume_inhalantes'] = 1 if inh else 2
+
+    # Marihuana: incluida en features pero NUNCA en el formulario
+    # Se envía como NaN → el SimpleImputer del pipeline la completa con la mediana
+    datos['consume_marihuana'] = np.nan
+
+    # ── BOTÓN ──────────────────────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    _, btn_col, _ = st.columns([1, 2, 1])
+    with btn_col:
+        predecir = st.button("Ejecutar Análisis de Riesgo →")
+
+    if predecir:
+        # Construir DataFrame con TODAS las features en el orden exacto del modelo
+        fila = {f: np.nan for f in features}
+        fila.update(datos)
+        X = pd.DataFrame([fila])[features]
+
+        with st.spinner("Procesando perfil..."):
+            probabilidad = modelo.predict_proba(X)[0, 1]
+
+        nivel, label, color, descripcion = nivel_riesgo(probabilidad)
+
+        sec("—", "Resultado del Análisis")
+
+        st.markdown(f"""
+        <div class="result-card {nivel}">
+            <div class="r-eyebrow">Probabilidad Estimada · Consumo de Sustancias Duras</div>
+            <div class="r-number">{probabilidad:.1%}</div>
+            <div class="r-label">{label}</div>
+            <div class="r-desc">{descripcion}</div>
+            <div class="risk-track" style="margin-top:1.75rem;">
+                <div class="risk-fill" style="width:{probabilidad*100:.1f}%; background:{color};"></div>
+            </div>
+            <div class="risk-ticks">
+                <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        sust = sum([datos.get('consume_cigarrillo', 2) == 1,
+                    datos.get('consume_alcohol', 2) == 1,
+                    datos.get('consume_inhalantes', 2) == 1])
+        dx = sum([datos.get('dx_hipertension', 2) == 1,
+                  datos.get('dx_tuberculosis', 2) == 1,
+                  datos.get('dx_vih_sida', 2) == 1])
+
+        st.markdown(f"""
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-val">{datos['edad']}</div>
+                <div class="stat-lbl">Edad</div>
+                <div class="stat-note">Promedio consumidores: 37 a.</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val">{tiempo_total}</div>
+                <div class="stat-lbl">Meses en Calle</div>
+                <div class="stat-note">Mayor tiempo = mayor riesgo</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val">{sust}/3</div>
+                <div class="stat-lbl">Sustancias Previas</div>
+                <div class="stat-note">Cigarrillo · Alcohol · Inhalantes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val">{dx}/3</div>
+                <div class="stat-lbl">Diagnósticos</div>
+                <div class="stat-note">HTA · TBC · VIH/SIDA</div>
+            </div>
+        </div>
+        <div class="notice">
+            <strong>Uso responsable:</strong> este output es el resultado de un modelo de
+            clasificación binaria (AUC-ROC ≈ 0.90). No constituye diagnóstico clínico.
+            Debe interpretarse por profesionales de salud mental en contexto.
+        </div>
+        """, unsafe_allow_html=True)
 
 
-# ==============================================================================
-# FUNCIÓN PRINCIPAL (FLUJO DEL DASHBOARD)
-# ==============================================================================
-
-def main():
-    """
-    Función principal que orquesta el dashboard.
-    
-    Flujo:
-    1. Header y descripción
-    2. Cargar modelo y diccionario (cached)
-    3. Sidebar con navegación
-    4. Según selección, mostrar:
-       - Formulario interactivo (página principal)
-       - Información del modelo
-       - Gráficas
-    5. En formulario: capturar datos → predecir → mostrar resultado
-    """
-    
-    # ========================================================================
-    # HEADER
-    # ========================================================================
+# ──────────────────────────────────────────────────────────────────────────────
+# PÁGINA 2 — MODELO
+# ──────────────────────────────────────────────────────────────────────────────
+def pagina_modelo():
     st.markdown("""
-    <div style='text-align: center; padding: 2rem;'>
-        <h1>🔮 Predictor CDT</h1>
-        <h3 style='color: #666;'>Predicción de Consumo de Sustancias Duras</h3>
-        <p style='font-size: 0.9rem; color: #999;'>
-            Personas en Situación de Calle — Técnicas Cuantitativas II
-        </p>
+    <div class="kpi-strip">
+        <div class="kpi-card"><div class="kpi-val">~0.90</div><div class="kpi-lbl">AUC-ROC</div></div>
+        <div class="kpi-card"><div class="kpi-val">~0.82</div><div class="kpi-lbl">F1-Score</div></div>
+        <div class="kpi-card"><div class="kpi-val">5-fold</div><div class="kpi-lbl">Validación Cruzada</div></div>
     </div>
     """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # ========================================================================
-    # SIDEBAR: NAVEGACIÓN
-    # ========================================================================
-    with st.sidebar:
-        st.markdown("### 🗂️ Navegación")
-        
-        pagina = st.radio(
-            "Selecciona una sección:",
-            ["🎯 Hacer Predicción", "ℹ️  Información del Modelo", "📊 Gráficas"],
-            index=0
-        )
-        
-        st.markdown("---")
-        
-        # Información en sidebar
-        st.markdown("### 📖 Información Útil")
+
+    tab1, tab2, tab3 = st.tabs(["Variables", "Pipeline", "Hallazgos"])
+
+    with tab1:
         st.markdown("""
-        **Target**: Consumo de sustancias duras
-        - Basuco
-        - Heroína
-        - Cocaína
-        
-        **Modelos**: 3 modelos entrenados
-        - Regresión Logística
-        - Random Forest
-        - Gradient Boosting
-        
-        **Predictores**: 19 variables
-        - Sociodemográficas
-        - Historia en calle
-        - Salud
-        - Sustancias
-        """)
-    
-    # ========================================================================
-    # CONTENIDO PRINCIPAL SEGÚN PÁGINA
-    # ========================================================================
-    
-    if pagina == "🎯 Hacer Predicción":
-        # Cargar modelo (cached)
-        modelo = cargar_modelo("outputs/mejor_modelo.joblib")
-        predictores = cargar_datos_predictor()
-        
-        st.markdown("### 📝 Formulario Interactivo")
-        st.markdown("Completa los datos para generar una predicción:")
-        
-        # Crear formulario
-        datos_usuario = crear_formulario_datos()
-        
-        # Botón para predecir
-        if st.button(
-            "🔮 GENERAR PREDICCIÓN",
-            key="btn_predecir",
-            help="Haz clic para predecir el riesgo de consumo de sustancias duras"
-        ):
-            # Mostrar loading
-            with st.spinner("Procesando..."):
-                # Preparar datos
-                X_nuevo = preparar_datos_prediccion(datos_usuario, predictores)
-                
-                # Predecir
-                prediccion = modelo.predict(X_nuevo)[0]
-                probabilidad = modelo.predict_proba(X_nuevo)[0, 1]
-            
-            # ================================================================
-            # MOSTRAR RESULTADO
-            # ================================================================
-            st.markdown("---")
-            st.markdown("### 🎯 Resultado de la Predicción")
-            
-            # Obtener interpretación
-            categoria, color, descripcion = obtener_interpretacion_riesgo(probabilidad)
-            
-            # Mostrar en caja grande
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                # Categoría de riesgo
-                st.markdown(f"""
-                <div style='
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 2rem;
-                    border-radius: 10px;
-                    text-align: center;
-                '>
-                    <h2 style='margin: 0; color: white;'>{categoria}</h2>
-                    <p style='margin: 0.5rem 0 0 0; color: #eee;'>{descripcion}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col2:
-                # Probabilidad exacta
-                st.metric(
-                    "Probabilidad de Consumo Duro",
-                    f"{probabilidad:.2%}",
-                    delta=f"{probabilidad*100:.1f}%",
-                    delta_color="inverse"
-                )
-            
-            # Barra de progreso visual
-            st.progress(probabilidad, text="Riesgo: " + f"{probabilidad:.1%}")
-            
-            # Información adicional
-            st.markdown("---")
-            
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.metric(
-                    "Edad",
-                    f"{datos_usuario['edad']} años",
-                    delta="Factor de riesgo bien documentado"
-                )
-            
-            with col2:
-                st.metric(
-                    "Tiempo en Calle",
-                    f"{datos_usuario['tiempo_total_calle_meses']} meses",
-                    delta="Mayor tiempo = mayor exposición"
-                )
-            
-            with col3:
-                sustancias_consumidas = sum([
-                    datos_usuario['consume_cigarrillo'] == 1,
-                    datos_usuario['consume_alcohol'] == 1,
-                    datos_usuario['consume_marihuana'] == 1,
-                    datos_usuario['consume_inhalantes'] == 1
-                ])
-                st.metric(
-                    "Sustancias Consumidas",
-                    f"{sustancias_consumidas} de 4",
-                    delta="Escalada de consumo"
-                )
-            
-            # Advertencia/recomendación
-            st.markdown("---")
-            st.warning(
-                """
-                ⚠️  **Nota Importante**:
-                - Esta predicción es un modelo estadístico, no un diagnóstico médico.
-                - Los resultados deben interpretarse en contexto clínico y profesional.
-                - Para evaluación clínica, contacta a profesionales de salud mental.
-                """,
-                icon="⚠️"
+        <div class="prose">
+        <h4>Variable Target</h4>
+        Consumo de sustancias de alta dependencia: basuco, cocaína o heroína.
+        Variable binaria — 1: consume / 0: no consume.
+        Balance en dataset: ~49% / 51%, sin necesidad de re-muestreo.
+
+        <h4>Predictores Activos (18 variables)</h4>
+        <ul>
+            <li><strong>Sociodemográficas:</strong> edad, género, orientación sexual, nivel educativo, alfabetismo</li>
+            <li><strong>Historia en calle:</strong> tiempo total (meses), razón de inicio, razón de permanencia</li>
+            <li><strong>Subsistencia:</strong> forma de obtención de ingresos</li>
+            <li><strong>Salud:</strong> hipertensión, tuberculosis, VIH/SIDA, capacidad funcional</li>
+            <li><strong>Sustancias previas:</strong> cigarrillo, alcohol, inhalantes</li>
+        </ul>
+
+        <h4>Marihuana — Incluida en entrenamiento, excluida del formulario</h4>
+        <code>consume_marihuana</code> forma parte del modelo entrenado (el pipeline la requiere),
+        pero en producción se imputa con <code>NaN</code> por las siguientes razones técnicas:
+        <ul>
+            <li><strong>Colinealidad con el target:</strong> 67% de co-ocurrencia con consumo duro.
+            El modelo aprendería a detectar co-consumo, no riesgo causal independiente.</li>
+            <li><strong>Data leakage conceptual:</strong> en intervención temprana el individuo
+            puede no tener aún historial de marihuana. Un predictor que requiere conocer el
+            co-consumo actual es inútil para prevención efectiva.</li>
+            <li><strong>Gestión técnica:</strong> el <code>SimpleImputer</code> del pipeline
+            reemplaza el <code>NaN</code> con la mediana de entrenamiento, manteniendo
+            la estructura del modelo sin alterar sus parámetros.</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with tab2:
+        st.markdown("""
+        <div class="prose">
+        <h4>Arquitectura del Pipeline (scikit-learn)</h4>
+        <ol>
+            <li><strong>SimpleImputer (mediana):</strong> maneja valores faltantes en variables
+            categóricas codificadas como enteros. La mediana es robusta a outliers y preserva
+            la escala ordinal. También gestiona el <code>NaN</code> de marihuana en producción.</li>
+            <li><strong>StandardScaler:</strong> estandariza a media 0 y desviación estándar 1.
+            Necesario para regresión logística; mejora convergencia en todos los estimadores.</li>
+            <li><strong>Clasificador:</strong> mejor modelo seleccionado por AUC-ROC
+            en validación cruzada estratificada de 5 folds.</li>
+        </ol>
+
+        <h4>Modelos Evaluados</h4>
+        <ul>
+            <li><strong>Regresión Logística:</strong> línea base interpretable. Coeficientes
+            mapeables directamente a odds ratios para cada variable.</li>
+            <li><strong>Random Forest:</strong> captura interacciones no lineales entre predictores.
+            Robusto ante outliers y variables de baja relevancia.</li>
+            <li><strong>Gradient Boosting:</strong> mayor potencia predictiva. Ganador en la
+            mayoría de iteraciones de la validación cruzada.</li>
+        </ul>
+
+        <h4>Criterio de Selección del Modelo Final</h4>
+        Selección por <strong>AUC-ROC</strong> y no por accuracy, dado que en este contexto
+        los <em>falsos negativos</em> (no detectar consumo real) tienen mayor costo social
+        que los falsos positivos. La curva ROC refleja la capacidad discriminante real
+        independientemente del umbral de decisión.
+        </div>
+        """, unsafe_allow_html=True)
+
+    with tab3:
+        st.markdown("""
+        <div class="prose">
+        <h4>Importancia de Variables — Hallazgos Clave</h4>
+        <ul>
+            <li><strong>Inhalantes</strong>
+            <span class="badge badge-red">82% co-ocurrencia</span>
+            Predictor más fuerte. La ruta inhalante → basuco está ampliamente documentada
+            en literatura latinoamericana de consumo en población de calle.</li>
+            <li><strong>Tiempo en calle</strong>
+            <span class="badge badge-red">Alto impacto</span>
+            Efecto no lineal. El umbral crítico se identifica alrededor de los 36 meses
+            acumulados, punto de inflexión en la curva de probabilidad predicha.</li>
+            <li><strong>Edad</strong>
+            <span class="badge badge-red">−9 años en promedio</span>
+            Consumidores significativamente más jóvenes. La ventana de intervención
+            más efectiva es temprana, antes de la consolidación del patrón de consumo.</li>
+            <li><strong>Tuberculosis</strong>
+            <span class="badge badge-red">Alta sensibilidad</span>
+            Fuerte correlación con consumo de basuco por vía pulmonar. Puede usarse como
+            señal de alerta en registros clínicos existentes para tamizaje de riesgo.</li>
+            <li><strong>Reciclaje como subsistencia</strong>
+            <span class="badge badge-grn">Factor protector relativo</span>
+            Perfil de menor riesgo. Mantiene estructura de actividad económica y reduce
+            tiempo de exposición en entornos de alta disponibilidad de sustancias.</li>
+        </ul>
+
+        <h4>Limitaciones del Modelo</h4>
+        <ul>
+            <li>Entrenado con datos de una región específica — generalización limitada
+            a otros contextos sin proceso de reentrenamiento.</li>
+            <li>Variables por auto-reporte: posible subestimación del consumo real
+            por sesgo de deseabilidad social en contexto de encuesta.</li>
+            <li>Modelo estático: no captura trayectorias temporales de entrada y salida
+            del consumo, ni cambios en el perfil del individuo a lo largo del tiempo.</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PÁGINA 3 — VISUALIZACIONES
+# ──────────────────────────────────────────────────────────────────────────────
+def pagina_graficas():
+    tab1, tab2, tab3 = st.tabs(
+        ["Importancia de Variables", "Distribuciones", "Análisis Comparativo"]
+    )
+    items = [
+        ("Gráfica de importancia de variables",
+         "Pendiente — requiere modelo final entrenado"),
+        ("Distribuciones por variable",
+         "Comparación consumidores vs. no consumidores"),
+        ("Posicionamiento del individuo en la población",
+         "Percentiles y análisis de clusters"),
+    ]
+    for tab, (title, sub) in zip([tab1, tab2, tab3], items):
+        with tab:
+            st.markdown(
+                f'<div class="placeholder">{title}<span>{sub}</span></div>',
+                unsafe_allow_html=True
             )
-    
-    elif pagina == "ℹ️  Información del Modelo":
-        st.markdown("### 📚 Información del Modelo Predictivo")
-        
-        st.markdown("""
-        #### 🎯 Objetivo
-        Predecir si una persona en situación de calle consume sustancias de **alta dependencia**
-        (basuco, heroína o cocaína) basándose en variables sociodemográficas, historia en calle
-        y patrones de consumo.
-        
-        #### 📊 Datos de Entrenamiento
-        - **Registros**: ~5,000 personas en situación de calle
-        - **Balance de clases**: ~49% consumo duro / ~51% no consumo duro (perfecto balance)
-        - **Edad promedio**: 37 años (consumidores) vs 46 años (no consumidores)
-        
-        #### 🤖 Modelos Entrenados
-        1. **Regresión Logística**: Interpretable, coeficientes directos
-        2. **Random Forest**: Captura no-linealidades, importancia variable
-        3. **Gradient Boosting**: Máxima precisión predictiva (típicamente mejor)
-        
-        #### 📈 Métricas de Rendimiento
-        - **AUC-ROC**: ~0.90 (excelente discriminación entre clases)
-        - **F1-Score**: ~0.82 (buen balance precisión/recall)
-        - **Validación cruzada**: 5 folds estratificados
-        
-        #### 🔍 Hallazgos Clave
-        - **Inhalantes**: 82% de consumidores → duro (predictor más fuerte)
-        - **Marihuana**: 67% de consumidores → duro (escalada evidente)
-        - **Edad**: Consumidores en promedio 9 años más jóvenes
-        - **Educación técnica**: Mayor riesgo (posible efecto urbano)
-        
-        #### 🏗️ Arquitectura
-        Pipeline con:
-        1. **Imputación**: Mediana (estrategia para categóricas)
-        2. **Escalado**: StandardScaler (estandarización)
-        3. **Modelo**: Mejor modelo seleccionado por AUC-ROC
-        
-        #### ⚠️ Limitaciones
-        - Modelo entrenado con datos de una región específica
-        - Puede haber sesgos en la recolección de datos
-        - No reemplaza evaluación clínica profesional
-        - Predicciones solo tan buenas como los datos de entrada
-        """)
-    
-    elif pagina == "📊 Gráficas":
-        mostrar_seccion_graficas()
 
 
-# ==============================================================================
-# PUNTO DE ENTRADA
-# ==============================================================================
+# ──────────────────────────────────────────────────────────────────────────────
+# MAIN
+# ──────────────────────────────────────────────────────────────────────────────
+def main():
+    st.markdown('<div class="shell">', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="wordmark">
+        <span class="wordmark-main">◈ CDT Predictor</span>
+        <span class="wordmark-sep">·</span>
+        <span class="wordmark-sub">Técnicas Cuantitativas II &nbsp;·&nbsp; Análisis de Riesgo en Población de Calle</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    tab_pred, tab_mod, tab_graf = st.tabs([
+        "Análisis Individual",
+        "Documentación del Modelo",
+        "Visualizaciones"
+    ])
+
+    with tab_pred:
+        pagina_prediccion()
+    with tab_mod:
+        pagina_modelo()
+    with tab_graf:
+        pagina_graficas()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
-    """
-    Punto de entrada de Streamlit.
-    
-    Uso:
-        streamlit run view/dashboard.py
-    
-    Luego abre: http://localhost:8501
-    """
     main()

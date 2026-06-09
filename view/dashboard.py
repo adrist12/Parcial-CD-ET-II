@@ -1154,9 +1154,9 @@ def main():
         <span style="font-family:'JetBrains Mono',monospace;"><b>Número del equipo:</b> 2</span><br>
         <span style="font-family:'JetBrains Mono',monospace;"><b>Integrantes:</b></span>
         <ul style="margin-top: 0.25rem; margin-bottom: 0; padding-left: 1.25rem;">
-            <li>Adrian Acosta</li>
-            <li>Mariangel Beltran</li>
-            <li>Angie Gutierrez</li>
+            <li>Adrian Acosta :)</li>
+            <li>Mariangel Beltran :)</li>
+            <li>Angie Gutierrez :)</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)

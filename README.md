@@ -315,6 +315,6 @@ Si hay errores:
 
 ---
 
-**Última actualización**: 2026-06-08  
+**Última actualización**: 2026-06-09
 **Versión**: 1.0  
-**Autor**: Modelo automático — Técnicas Cuantitativas II
+**Autores**: Adrián Acosta, Angie Gutierrez y Mariangel Beltrán

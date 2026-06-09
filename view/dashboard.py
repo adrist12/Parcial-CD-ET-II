@@ -345,6 +345,7 @@ div[data-testid="stButton"] > button:hover { background: #2451FF !important; }
 # ──────────────────────────────────────────────────────────────────────────────
 # CACHE
 # ──────────────────────────────────────────────────────────────────────────────
+
 @st.cache_resource
 def cargar_modelo(ruta):
     try:
@@ -353,12 +354,10 @@ def cargar_modelo(ruta):
         st.error(f"Modelo no encontrado: `{ruta}` — ejecuta `python main.py` primero.")
         st.stop()
 
+
 @st.cache_data
 def get_features():
-    # Lista COMPLETA tal como fue entrenada — incluyendo consume_marihuana
     return PredictiveModel.FEATURES
-
-
 # ──────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ──────────────────────────────────────────────────────────────────────────────
@@ -829,7 +828,48 @@ def pagina_graficas():
             mapeo = {int(k): v for k, v in config['respuestas']['P28'].items()}
             df['nivel_educativo'] = df['nivel_educativo'].map(mapeo)
         
-        # 8. Crear columna de número de enfermedades
+        # 8. Mapeo para GÉNERO (P9)
+        if 'genero' in df.columns and 'P9' in config['respuestas']:
+            mapeo = {int(k): v for k, v in config['respuestas']['P9'].items()}
+            df['genero'] = df['genero'].map(mapeo)
+
+        # 9. Mapeo para RAZÓN DE INICIO EN CALLE (P22)
+        if 'razon_inicio_vida_calle' in df.columns and 'P22' in config['respuestas']:
+            mapeo = {int(k): v for k, v in config['respuestas']['P22'].items()}
+            df['razon_inicio_vida_calle'] = df['razon_inicio_vida_calle'].map(mapeo)
+
+        # 10. Mapeo para SABE LEER Y ESCRIBIR (P27)
+        if 'sabe_leer_escribir' in df.columns and 'P27' in config['respuestas']:
+            mapeo = {int(k): v for k, v in config['respuestas']['P27'].items()}
+            df['sabe_leer_escribir'] = df['sabe_leer_escribir'].map(mapeo)
+
+        # 11. Mapeo columnas de consumo de sustancias (P30S*) -> Sí/No
+        sustancias_cols = {
+            'consume_cigarrillo': ('P30S1', 'Cigarrillo'),
+            'consume_alcohol': ('P30S2', 'Alcohol'),
+            'consume_marihuana': ('P30S3', 'Marihuana'),
+            'consume_inhalantes': ('P30S4', 'Inhalantes'),
+            'consume_cocaina': ('P30S5', 'Cocaína'),
+            'consume_basuco': ('P30S6', 'Basuco'),
+            'consume_heroina': ('P30S7', 'Heroína'),
+            'consume_pepas': ('P30S8', 'Pepas'),
+            'consume_otras_sustancias': ('P30S9', 'Otras'),
+        }
+        mapeo_si_no = {1: 'Sí', 2: 'No'}
+        for col, (p_key, _) in sustancias_cols.items():
+            if col in df.columns:
+                df[col] = df[col].map(mapeo_si_no)
+
+        # 12. Crear columna resumen: sustancia con mayor frecuencia de consumo (para P30 combinado)
+        sustancias_nombre = {
+            'consume_cigarrillo': 'Cigarrillo', 'consume_alcohol': 'Alcohol',
+            'consume_marihuana': 'Marihuana', 'consume_inhalantes': 'Inhalantes',
+            'consume_cocaina': 'Cocaína', 'consume_basuco': 'Basuco',
+            'consume_heroina': 'Heroína', 'consume_pepas': 'Pepas',
+            'consume_otras_sustancias': 'Otras',
+        }
+
+        # 13. Crear columna de número de enfermedades
         dx_cols = ['dx_hipertension', 'dx_tuberculosis', 'dx_vih_sida']
         if all(col in df.columns for col in dx_cols):
             df['num_enfermedades'] = (df[dx_cols] == 1).sum(axis=1)
@@ -850,8 +890,39 @@ def pagina_graficas():
         'Razón de seguir en la calle': 'razon_continua_en_calle',
         'Principal forma de obtener dinero': 'forma_obtener_dinero',
         'Orientación sexual': 'orientacion_sexual',
-        'Nivel educativo': 'nivel_educativo'
+        'Nivel educativo': 'nivel_educativo',
+        # ── Nuevas variables (P8, P9, P22, P27, P28) ──
+        'Edad cumplida': 'edad',
+        'Género': 'genero',
+        'Razón de vivir en la calle': 'razon_inicio_vida_calle',
+        'Sabe leer y escribir': 'sabe_leer_escribir',
     }
+
+    # Columnas de consumo de sustancias (P30)
+    cols_consumo = [
+        ('consume_cigarrillo', 'Cigarrillo'),
+        ('consume_alcohol', 'Alcohol'),
+        ('consume_marihuana', 'Marihuana'),
+        ('consume_inhalantes', 'Inhalantes'),
+        ('consume_cocaina', 'Cocaína'),
+        ('consume_basuco', 'Basuco'),
+        ('consume_heroina', 'Heroína'),
+        ('consume_pepas', 'Pepas'),
+        ('consume_otras_sustancias', 'Otras'),
+    ]
+
+    # Columnas de edad de inicio de consumo (P31)
+    cols_edad_inicio = [
+        ('edad_inicio_cigarrillo', 'Cigarrillo'),
+        ('edad_inicio_alcohol', 'Alcohol'),
+        ('edad_inicio_marihuana', 'Marihuana'),
+        ('edad_inicio_inhalantes', 'Inhalantes'),
+        ('edad_inicio_cocaina', 'Cocaína'),
+        ('edad_inicio_basuco', 'Basuco'),
+        ('edad_inicio_heroina', 'Heroína'),
+        ('edad_inicio_pepas', 'Pepas'),
+        ('edad_inicio_otras_sustancias', 'Otras'),
+    ]
     
     # Verificar qué columnas existen realmente
     columnas_existentes = []
@@ -868,7 +939,12 @@ def pagina_graficas():
     opciones = {amigable: real for amigable, real in columnas_existentes}
     
     # Pestañas
-    tab1, tab3 = st.tabs(["📊 Distribuciones", "🔗 Relaciones"])
+    tab1, tab_consumo, tab_edad_inicio, tab3 = st.tabs([
+        "📊 Distribuciones",
+        "💊 Consumo de Sustancias",
+        "📅 Edad de Inicio de Consumo",
+        "🔗 Relaciones"
+    ])
     
     with tab1:
         st.markdown("### Distribución de cada variable")
@@ -879,6 +955,10 @@ def pagina_graficas():
             # Numérica continua (ej. tiempo en meses)
             fig = px.histogram(df, x=col_real, title=f"Distribución de {var_amigable}",
                                labels={col_real: var_amigable}, color_discrete_sequence=['#2451FF'])
+            
+            # AJUSTE AQUÍ: Añadir espacio entre barras para evitar el bloque sólido
+            fig.update_layout(bargap=0.1)
+            
         else:
             # Categórica o número de enfermedades (entero)
             conteos = df[col_real].value_counts().reset_index()
@@ -887,7 +967,113 @@ def pagina_graficas():
                          color_discrete_sequence=['#2451FF'])
             fig.update_layout(xaxis={'categoryorder': 'total descending'})
         st.plotly_chart(fig, use_container_width=True)
-    
+
+    with tab_consumo:
+        st.markdown("### Consumo de Sustancias (P30)")
+        
+        # AJUSTE 1: Mostrar el total de personas analizadas en el cálculo
+        total_personas = len(df)
+        # --- REEMPLAZA EL ST.METRIC POR ESTO ---
+        
+        st.markdown("Porcentaje de personas que reportan consumir cada sustancia.")
+        
+        # Calcular % de consumo por sustancia
+        resumen_consumo = []
+        for col, nombre in cols_consumo:
+            if col in df.columns:
+                total = df[col].notna().sum()
+                si = (df[col] == 'Sí').sum()
+                pct = round(si / total * 100, 1) if total > 0 else 0
+                resumen_consumo.append({'Sustancia': nombre, 'Porcentaje (%)': pct, 'Cantidad': int(si)})
+        
+        if resumen_consumo:
+            df_consumo = pd.DataFrame(resumen_consumo).sort_values('Porcentaje (%)', ascending=False)
+            fig_consumo = px.bar(
+                df_consumo, x='Sustancia', y='Porcentaje (%)',
+                title='Prevalencia de consumo por sustancia',
+                text='Porcentaje (%)',
+                color='Porcentaje (%)',
+                color_continuous_scale=['#EEF2FF', '#2451FF'],
+                labels={'Porcentaje (%)': '% de personas'}
+            )
+            fig_consumo.update_traces(texttemplate='%{text}%', textposition='outside')
+            fig_consumo.update_layout(coloraxis_showscale=False)
+            st.plotly_chart(fig_consumo, use_container_width=True)
+
+            # Segunda gráfica: seleccionar una sustancia específica y ver distribución Sí/No
+            st.markdown("---")
+            
+            # AJUSTE 2: Lista de comprensión corregida y simplificada sin conflictos de nombres
+            opciones_sustancia = [nombre for col, nombre in cols_consumo if col in df.columns]
+            
+            # Solo renderizar el selectbox si realmente hay opciones válidas
+            if opciones_sustancia:
+                sustancia_sel = st.selectbox(
+                    "Ver distribución Sí / No para una sustancia:",
+                    opciones_sustancia,
+                    key='consumo_detalle'
+                )
+                
+                col_sel = next((c for c, n in cols_consumo if n == sustancia_sel and c in df.columns), None)
+                if col_sel:
+                    conteos_sn = df[col_sel].value_counts().reset_index()
+                    conteos_sn.columns = ['Respuesta', 'Frecuencia']
+                    fig_sn = px.bar(
+                        conteos_sn, x='Respuesta', y='Frecuencia',
+                        title=f'Distribución de consumo — {sustancia_sel}',
+                        color='Respuesta',
+                        color_discrete_map={'Sí': '#CF2C2C', 'No': '#1A9E6A'},
+                        text='Frecuencia'
+                    )
+                    fig_sn.update_traces(textposition='outside')
+                    st.plotly_chart(fig_sn, use_container_width=True)
+
+    with tab_edad_inicio:
+        st.markdown("### Edad de Inicio de Consumo (P31)")
+        st.markdown("Distribución de la edad en que las personas iniciaron el consumo de cada sustancia.")
+
+        # Selectbox para elegir la sustancia
+        sustancias_disponibles = [(c, n) for c, n in cols_edad_inicio if c in df.columns]
+        if sustancias_disponibles:
+            nombres_disp = [n for _, n in sustancias_disponibles]
+            sust_ei = st.selectbox("Selecciona la sustancia:", nombres_disp, key='edad_inicio_sel')
+            col_ei = next((c for c, n in sustancias_disponibles if n == sust_ei), None)
+            if col_ei:
+                datos_ei = df[col_ei].dropna()
+                if len(datos_ei) > 0:
+                    fig_ei = px.histogram(
+                        datos_ei, x=col_ei,
+                        title=f'Edad de inicio de consumo — {sust_ei}',
+                        labels={col_ei: 'Edad de inicio (años)'},
+                        color_discrete_sequence=['#2451FF'],
+                        nbins=30
+                    )
+                    fig_ei.update_layout(bargap=0.05)
+                    st.plotly_chart(fig_ei, use_container_width=True)
+
+                    # Box plot comparativo de todas las sustancias
+                    st.markdown("---")
+                    st.markdown("**Comparación de edad de inicio entre todas las sustancias**")
+                    datos_box = []
+                    for col_b, nom_b in sustancias_disponibles:
+                        sub = df[[col_b]].dropna().copy()
+                        sub.columns = ['Edad']
+                        sub['Sustancia'] = nom_b
+                        datos_box.append(sub)
+                    if datos_box:
+                        df_box = pd.concat(datos_box, ignore_index=True)
+                        fig_box = px.box(
+                            df_box, x='Sustancia', y='Edad',
+                            title='Distribución de edad de inicio por sustancia',
+                            color='Sustancia',
+                            color_discrete_sequence=px.colors.qualitative.Set2
+                        )
+                        st.plotly_chart(fig_box, use_container_width=True)
+                else:
+                    st.info(f"No hay datos de edad de inicio para {sust_ei}.")
+        else:
+            st.warning("No se encontraron columnas de edad de inicio en los datos.")
+
     with tab3:
         st.markdown("### Relación entre dos variables")
         col1 = st.selectbox("Variable X:", list(opciones.keys()), key='x')
@@ -905,21 +1091,54 @@ def pagina_graficas():
                             title=f"Frecuencias cruzadas: {col1} vs {col2}",
                             color_continuous_scale='Blues')
             st.plotly_chart(fig, use_container_width=True)
+# AJUSTE AQUÍ: Añadimos la función para el conteo global
+@st.cache_resource
+def obtener_total_entrevistados():
+    try:
+        # Importamos localmente el modelo para leer la base de datos original
+        from model.interview_model import InterviewModel
+        data_path = "data/CHC_base_anonimizada09-09-2021.xlsx"
+        dict_path = "data/dictionary.json"
+        
+        interview = InterviewModel(data_path, dict_path)
+        interview.clean_data()
+        return len(interview.data)
+    except Exception:
+        return 0 # Valor por defecto si no encuentra el archivo o falla
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MAIN
 # ──────────────────────────────────────────────────────────────────────────────
 def main():
+    # A. Control del estado de la sesión para el total de personas
+    if 'total_personas' not in st.session_state:
+        st.session_state['total_personas'] = obtener_total_entrevistados()
+    
+    total = st.session_state['total_personas']
+
+    # B. Abrir contenedor principal
     st.markdown('<div class="shell">', unsafe_allow_html=True)
 
+    # C. Tu Wordmark de marca
     st.markdown("""
     <div class="wordmark">
         <span class="wordmark-main">◈ CDT Predictor</span>
         <span class="wordmark-sep">·</span>
-        <span class="wordmark-sub">Técnicas Cuantitativas II &nbsp;·&nbsp; Análisis de Riesgo en Población de Calle</span>
+        <span class="wordmark-sub">Ciencia de Datos II &nbsp;·&nbsp; Análisis de Riesgo en Población de Calle</span>
     </div>
     """, unsafe_allow_html=True)
 
+    # D. NUEVO: Tu tarjeta KPI añadida de forma global antes de las pestañas
+    st.markdown(f"""
+    <div class="kpi-strip">
+        <div class="kpi-card">
+            <div class="kpi-val">{total:,}</div>
+            <div class="kpi-lbl">Total Personas Entrevistadas</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # E. Tus pestañas de navegación
     tab_pred, tab_mod, tab_graf = st.tabs([
         "Análisis Individual",
         "Documentación del Modelo",
@@ -933,8 +1152,8 @@ def main():
     with tab_graf:
         pagina_graficas()
 
+    # F. Cerrar contenedor principal
     st.markdown('</div>', unsafe_allow_html=True)
-
 
 if __name__ == "__main__":
     main()

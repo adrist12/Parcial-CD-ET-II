@@ -28,7 +28,7 @@ def main():
         subprocess.run([sys.executable, '-m', 'streamlit', 'run', 'view/dashboard.py'])
         return
 
-    # Sin argumentos: correr el pipeline de entrenamiento completo.
+    # Sin argumentos: correr el pipeline de entrenamiento completo
     print("=" * 60)
     print("PIPELINE CHC — CONSUMO DE SUSTANCIAS DURAS")
     print("=" * 60)

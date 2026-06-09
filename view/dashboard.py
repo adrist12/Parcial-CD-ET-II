@@ -649,6 +649,7 @@ def pagina_prediccion():
             Debe interpretarse por profesionales de salud mental en contexto.
         </div>
         """, unsafe_allow_html=True)
+        
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1143,6 +1144,20 @@ def main():
             <div class="kpi-val">{total:,}</div>
             <div class="kpi-lbl">Total Personas Entrevistadas</div>
         </div>
+    </div>
+    """, unsafe_allow_html=True)
+    # ── CRÉDITOS DEL EQUIPO (PIE DE PÁGINA) ────────────────────────────────────
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="notice" style="border-left: 4px solid #2451FF; background-color: rgba(36, 81, 255, 0.05);">
+        <strong style="color:#2451FF; font-size:1.05rem;">👥 Información del Proyecto</strong><br>
+        <span style="font-family:'JetBrains Mono',monospace;"><b>Número del equipo:</b> 2</span><br>
+        <span style="font-family:'JetBrains Mono',monospace;"><b>Integrantes:</b></span>
+        <ul style="margin-top: 0.25rem; margin-bottom: 0; padding-left: 1.25rem;">
+            <li>Adrian Acosta</li>
+            <li>Mariangel Beltran</li>
+            <li>Angie Gutierrez</li>
+        </ul>
     </div>
     """, unsafe_allow_html=True)
 
